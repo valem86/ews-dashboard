@@ -2350,6 +2350,18 @@ body::after {
     cursor: help;
 }
 
+/* Essendo il primo elemento a sinistra nei controlli, il tooltip centrato
+   (left:50% + translateX(-50%)) uscirebbe dal bordo sinistro dello schermo:
+   lo ancoriamo a sinistra dell'icona così si apre verso destra. */
+.graph-help .tooltip-text {
+    left: 0;
+    transform: none;
+}
+
+.graph-help:hover .tooltip-text {
+    transform: translateY(5px);
+}
+
 /* ---- Emblema circolare coerente per icone di sezione (FontAwesome) ---- */
 .section-icon-badge {
     width: 34px;
