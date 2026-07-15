@@ -1215,6 +1215,19 @@ body::after {
     transform: translateX(-50%) translateY(5px);
 }
 
+/* Apertura al tap/click (mobile e touch): stessa grafica dell'hover.
+   La classe .tooltip-open è gestita da app.js. */
+.info-tooltip.tooltip-open .tooltip-text {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(-50%) translateY(-5px);
+}
+
+.info-tooltip.tooltip-below.tooltip-open .tooltip-text {
+    transform: translateX(-50%) translateY(5px);
+}
+
 /* =========================================================
    DROPDOWN MULTISELECT
    ========================================================= */
@@ -1430,8 +1443,9 @@ body::after {
 
 /* Mobile Screens (max-width: 768px) */
 @media (max-width: 768px) {
-    /* Disabilita i popup fluttuanti nativi CSS all'hover su mobile */
-    .info-tooltip:hover .tooltip-text {
+    /* Disabilita l'hover "fantasma" su mobile, ma NON quando il tooltip
+       è stato aperto esplicitamente al tap (.tooltip-open) */
+    .info-tooltip:hover:not(.tooltip-open) .tooltip-text {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
@@ -2362,6 +2376,10 @@ body::after {
     transform: translateY(5px);
 }
 
+.info-tooltip.graph-help.tooltip-open .tooltip-text {
+    transform: translateY(5px);
+}
+
 /* ---- Emblema circolare coerente per icone di sezione (FontAwesome) ---- */
 .section-icon-badge {
     width: 34px;
@@ -2849,5 +2867,41 @@ body::after {
     .warning-item.yellow .warning-led,
     .warning-item.red .warning-led {
         animation: none !important;
+    }
+}
+
+/* =========================================================
+   TOOLTIP SU MOBILE — scheda centrata sempre nel viewport
+   Su schermi stretti il tooltip ancorato all'icona uscirebbe
+   dai bordi: da aperto (tap) lo mostriamo come overlay centrato.
+   In coda al foglio per vincere sulle regole di ancoraggio.
+   ========================================================= */
+@media (max-width: 768px) {
+    /* backdrop-filter sulle card crea un containing block che intrappola
+       position:fixed: su mobile lo disattiviamo (guadagno anche in fluidità) */
+    .card,
+    .main-header {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    .info-tooltip .tooltip-text,
+    .info-tooltip.tooltip-below .tooltip-text,
+    .info-tooltip.graph-help .tooltip-text {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        right: auto;
+        bottom: auto;
+        transform: translate(-50%, -50%);
+        width: min(320px, calc(100vw - 36px));
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+
+    .info-tooltip.tooltip-open .tooltip-text,
+    .info-tooltip.tooltip-below.tooltip-open .tooltip-text,
+    .info-tooltip.graph-help.tooltip-open .tooltip-text {
+        transform: translate(-50%, -50%);
     }
 }

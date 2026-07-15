@@ -1533,16 +1533,15 @@ function setupEventListeners() {
         });
     });
 
-    // Tooltip informativi per mobile (mostrati come alert nativo leggibile al click se lo schermo è stretto)
+    // Tooltip informativi: al tap/click si aprono in-page con la grafica
+    // del tooltip (funziona anche su touch, dove l'hover non esiste)
     document.querySelectorAll('.info-tooltip').forEach(tooltip => {
         tooltip.addEventListener('click', (e) => {
-            if (window.innerWidth <= 768) {
-                e.stopPropagation(); // Evita di attivare il click sulla card sottostante
-                const textEl = tooltip.querySelector('.tooltip-text');
-                if (textEl) {
-                    alert(textEl.innerText);
-                }
-            }
+            e.stopPropagation(); // Evita di attivare il click sulla card sottostante
+            const wasOpen = tooltip.classList.contains('tooltip-open');
+            document.querySelectorAll('.info-tooltip.tooltip-open')
+                .forEach(t => t.classList.remove('tooltip-open'));
+            if (!wasOpen) tooltip.classList.add('tooltip-open');
         });
     });
 
@@ -1556,6 +1555,10 @@ function setupEventListeners() {
         if (dropdownContent && dropdownBtn && !dropdownContent.contains(e.target) && !dropdownBtn.contains(e.target)) {
             dropdownContent.classList.remove('show');
         }
+
+        // Chiudi eventuali tooltip aperti al tap se si clicca fuori
+        document.querySelectorAll('.info-tooltip.tooltip-open')
+            .forEach(t => t.classList.remove('tooltip-open'));
     });
 }
 
