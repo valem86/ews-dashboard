@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Early Warning System</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet.js CSS per la Mappa -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+    
+    <!-- FontAwesome per icone moderne -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Flatpickr CSS per Calendario Date Range -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    
+    <!-- Vis.js Network per Grafi delle Relazioni -->
+    <link rel="stylesheet" href="https://unpkg.com/vis-network/styles/vis-network.min.css">
+
+    <link rel="stylesheet" href="style.css?v=19">
+</head>
+<body>
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="main-header">
+            <div class="logo-area">
+                <img src="assets/c2_logo_ews_1783429612378.jpg" alt="EWS" class="header-logo">
+                <div class="header-titles">
+                    <h1>Early Warning System</h1>
+                    <span class="header-subtitle">Monitoraggio flussi migratori da Libia e Tunisia</span>
+                </div>
+            </div>
+            <div class="status-bar">
+                <div class="last-updated-badge">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Ultimo dato wiki: <strong id="last-updated-time">Caricamento...</strong></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN LAYOUT -->
+        <main class="dashboard-layout">
+            
+            <!-- 1. WARNING MATRIX (Tutta larghezza - In alto) -->
+            <section class="full-width-panel">
+                <div class="card warning-matrix-card">
+                    <div class="card-header">
+                        <h2>
+                            <img src="assets/c2_logo_matrix_1783429620751.jpg" alt="" class="section-logo">
+                            <span>Matrice di Allerta</span>
+                            <span class="info-tooltip tooltip-below">
+                                <i class="fa-regular fa-circle-question"></i>
+                                <span class="tooltip-text">Matrice di allerta che aggrega i trigger attivati dai sensori EWS (GDELT, UNHCR, 4Mi, AIS) e da notizie di fonti aperte. Se i trigger si attivano, il rispettivo indicatore diventa rosso. Cliccando sui trigger attivi è possibile aprire la nota di approfondimento.</span>
+                            </span>
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="warning-grid-horizontal">
+                            <!-- Ordine pubblico -->
+                            <div class="warning-item" id="trigger-ordine_pubblico">
+                                <div class="warning-led"></div>
+                                <div class="warning-info">
+                                    <h3>Ordine pubblico</h3>
+                                    <p class="trigger-desc">Z-Score proteste violente > 1.5</p>
+                                </div>
+                            </div>
+                            <!-- Repressione e vuoti di potere -->
+                            <div class="warning-item" id="trigger-repressione_vuoti">
+                                <div class="warning-led"></div>
+                                <div class="warning-info">
+                                    <h3>Repressione & vuoti di potere</h3>
+                                    <p class="trigger-desc">Z-Score repressione o scontri > 1.5</p>
+                                </div>
+                            </div>
+                            <!-- Forze di sicurezza -->
+                            <div class="warning-item" id="trigger-forze_sicurezza">
+                                <div class="warning-led"></div>
+                                <div class="warning-info">
+                                    <h3>Forze di sicurezza</h3>
+                                    <p class="trigger-desc">Incidenti Guardia Costiera / Ammutinamenti</p>
+                                </div>
+                            </div>
+                            <!-- Pressione demografica -->
+                            <div class="warning-item" id="trigger-pressione_demografica">
+                                <div class="warning-led"></div>
+                                <div class="warning-info">
+                                    <h3>Pressione demografica</h3>
+                                    <p class="trigger-desc">Accumuli in snodi urbani / dati UNHCR</p>
+                                </div>
+                            </div>
+                            <!-- Push factors -->
+                            <div class="warning-item" id="trigger-push_factors">
+                                <div class="warning-led"></div>
+                                <div class="warning-info">
+                                    <h3>Push factors</h3>
+                                    <p class="trigger-desc">Variazione ingressi confini terrestri (Fattori di spinta 4Mi)</p>
+                                </div>
+                            </div>
+                            <!-- Fronte marittimo -->
+                            <div class="warning-item" id="trigger-fronte_marittimo">
+                                <div class="warning-led"></div>
+                                <div class="warning-info">
+                                    <h3>Fronte marittimo</h3>
+                                    <p class="trigger-desc">Navi ONG attive o Balloon Effect</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Legenda codici colore — barra orizzontale compatta -->
+                        <div class="matrix-legend">
+                            <span class="legend-title">Legenda:</span>
+                            <div class="legend-items">
+                                <div class="legend-item">
+                                    <span class="legend-led green"></span>
+                                    <span><strong>Stabile</strong> · situazione normale</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-led yellow"></span>
+                                    <span><strong>Attenzione</strong> · segnale precursore</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-led red"></span>
+                                    <span><strong>Allarme</strong> · criticità o anomalia</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-led gray"></span>
+                                    <span><strong>Nessun report</strong></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. TREND GDELT (Tutta larghezza - In mezzo) -->
+            <section class="full-width-panel">
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h2>
+                            <img src="assets/c2_logo_gdelt_1783429629809.jpg" alt="" class="section-logo">
+                            <span>Andamento politico-securitario (GDELT + ACLED)</span>
+                            <span class="info-tooltip">
+                                <i class="fa-regular fa-circle-question"></i>
+                                <span class="tooltip-text"><strong>GDELT (Global Database of Events, Language, and Tone)</strong> analizza milioni di articoli di stampa ogni giorno e calcola un Z-Score giornaliero per Libia e Tunisia: uno Z-Score &gt;1.5 segnala un'anomalia mediatica significativa rispetto alla media storica, potenziale indicatore precoce di instabilità.<br><br><strong>ACLED (Armed Conflict Location &amp; Event Data Project)</strong> registra eventi verificati su base giornaliera (scontri armati, proteste, violenze su civili).<br><br>La barra di calore sotto il grafico mostra l'intensità giornaliera ACLED: clicca per aprire il dettaglio degli eventi registrati in quella giornata. Clicca sui picchi della linea GDELT per aprire le notizie di riferimento con attori, localizzazioni e fonti.</span>
+                            </span>
+                        </h2>
+                        <div class="chart-filters">
+                            <div class="chart-filters-group">
+                                <button class="btn-tab active" data-country="ALL">Tutti</button>
+                                <button class="btn-tab" data-country="LY">Libia (LY)</button>
+                                <button class="btn-tab" data-country="TS">Tunisia (TS)</button>
+                            </div>
+                            <div class="chart-filters-divider"></div>
+                            <div class="chart-filters-group">
+                                <button class="btn-time-window" data-window="7">7gg</button>
+                                <button class="btn-time-window active" data-window="30">30gg</button>
+                                <button class="btn-time-window" data-window="90">90gg</button>
+                                <button class="btn-time-window" data-window="all">Tutto</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body chart-container">
+                        <!-- Label GDELT posizionata sopra lo scorrimento per restare visibile -->
+                        <div class="gdelt-strip-label" style="padding: 10px 15px 0 15px;">
+                            <span class="gdelt-badge">GDELT</span>
+                            <span>Z-Score Anomalie Mediatiche</span>
+                        </div>
+                        <div class="chart-scroll-container">
+                            <div class="chart-scroll-content">
+                                <div class="canvas-wrapper" style="position: relative; height: 300px; width: 100%;">
+                                    <canvas id="gdeltChart"></canvas>
+                                </div>
+                                <!-- ACLED Heatmap Strip -->
+                                <div id="acled-heatmap" class="acled-heatmap"></div>
+                            </div>
+                        </div>
+                        <!-- Label posizionata all'esterno dello scorrimento per restare visibile -->
+                        <div class="acled-strip-label" style="margin-top: 12px; padding: 0 15px 5px 15px;">
+                            <span class="acled-badge">ACLED</span>
+                            <span>Intensità conflitti ed eventi (Giornaliera)</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MODAL: GDELT Spike Detail -->
+            <div id="gdelt-modal" class="intel-modal-overlay" style="display:none;">
+                <div class="intel-modal">
+                    <div class="intel-modal-header">
+                        <div class="intel-modal-title">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span id="gdelt-modal-title">Dettaglio Spike GDELT</span>
+                        </div>
+                        <button class="intel-modal-close" onclick="document.getElementById('gdelt-modal').style.display='none'">&times;</button>
+                    </div>
+                    <div class="intel-modal-meta" id="gdelt-modal-meta"></div>
+                    <div class="intel-modal-body">
+                        <div class="intel-modal-subtitle">📰 Top 5 Notizie che hanno generato lo spike</div>
+                        <div class="intel-table-wrapper">
+                            <table class="intel-table" id="gdelt-modal-table">
+                                <thead>
+                                    <tr>
+                                        <th>Attore</th>
+                                        <th>Azione</th>
+                                        <th>Localizzazione</th>
+                                        <th>Coordinate</th>
+                                        <th>Menzioni</th>
+                                        <th>Fonte</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gdelt-modal-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL: ACLED Weekly Detail -->
+            <div id="acled-modal" class="intel-modal-overlay" style="display:none;">
+                <div class="intel-modal">
+                    <div class="intel-modal-header">
+                        <div class="intel-modal-title">
+                            <i class="fa-solid fa-map-location-dot"></i>
+                            <span id="acled-modal-title">Dettaglio ACLED</span>
+                        </div>
+                        <button class="intel-modal-close" onclick="document.getElementById('acled-modal').style.display='none'">&times;</button>
+                    </div>
+                    <div class="intel-modal-meta" id="acled-modal-meta"></div>
+                    <div class="intel-modal-body" style="max-height: 65vh; overflow-y: auto; -webkit-overflow-scrolling: touch;">
+                        <div class="intel-modal-subtitle">Registro eventi fisici verificati (ACLED)</div>
+                        <div id="acled-modal-events-container" class="acled-modal-events-container">
+                            <!-- Popolato dinamicamente da JS con schede dettagliate -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            
+            <!-- 3. MAPPA E TIMELINE (Affiancati, sotto, stessa altezza) -->
+            <div class="bottom-grid">
+                
+                <!-- Colonna Sinistra: Mappa Flotta ONG -->
+                <section class="left-panel">
+                    <div class="card map-card">
+                        <div class="card-header">
+                            <h2>
+                                <img src="assets/c2_logo_fleet_1783429638355.jpg" alt="" class="section-logo">
+                                <span>Posizionamento ONG nel Mar Mediterraneo&nbsp;<span class="info-tooltip">
+                                    <i class="fa-regular fa-circle-question"></i>
+                                    <span class="tooltip-text">Mappa interattiva per il monitoraggio della flotta e delle attività delle navi SAR delle ONG operanti nel Mediterraneo Centrale. Mostra la posizione in tempo reale, la rotta e lo stato del transponder AIS.</span>
+                                </span></span>
+                            </h2>
+                            <div class="map-filters">
+                                <div class="dropdown-multiselect" id="ship-dropdown">
+                                    <button class="dropdown-btn" id="ship-dropdown-btn">
+                                        <span>Filtra navi</span>
+                                        <i class="fa-solid fa-chevron-down"></i>
+                                    </button>
+                                    <div class="dropdown-content" id="ship-dropdown-content">
+                                        <label class="dropdown-option">
+                                            <input type="checkbox" id="ship-select-all" checked>
+                                            <span>Seleziona tutte</span>
+                                        </label>
+                                        <hr class="dropdown-divider">
+                                        <div id="ship-checkboxes-container">
+                                            <!-- Popolato dinamicamente da JS -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body map-container-equal">
+                            <div id="map"></div>
+                            <div class="map-legend-container" id="acled-map-legend"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Colonna Destra: Timeline Eventi -->
+                <section class="right-panel">
+                    <div class="card timeline-card">
+                        <div class="card-header">
+                            <h2>
+                                <img src="assets/c2_logo_timeline_1783429646899.jpg" alt="" class="section-logo">
+                                <span>Cronologia Eventi&nbsp;<span class="info-tooltip">
+                                    <i class="fa-regular fa-circle-question"></i>
+                                    <span class="tooltip-text">Flusso cronologico interattivo di tutte le note validate caricate nel wiki, inclusi i sensori EWS e le notizie OSINT. Consente la ricerca testuale, il filtraggio per tipo (EWS/News) e la selezione per intervallo di date.</span>
+                                </span></span>
+                            </h2>
+                            <div class="timeline-filters">
+                                <input type="text" id="search-input" placeholder="Cerca">
+                                <select id="type-filter">
+                                    <option value="all">Tutti</option>
+                                    <option value="ews">EWS</option>
+                                    <option value="news">News</option>
+                                </select>
+                                <div class="date-range-filter">
+                                    <input type="text" id="date-range" placeholder="Filtra per data" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body timeline-wrapper-equal">
+                            <div id="timeline-events" class="timeline">
+                                <!-- Popolato dinamicamente da JS -->
+                                <div class="loading-spinner">
+                                    <i class="fa-solid fa-spinner fa-spin"></i> Caricamento in corso...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- GRAFI (Wiki + ACLED) — card unica con tab -->
+            <section class="full-width-panel" id="graphs-section">
+                <div class="card graph-card">
+                    <div class="graph-tabs" role="tablist">
+                        <button class="graph-tab active" data-graph="wiki" role="tab" aria-selected="true">
+                            <span class="section-icon-badge"><i class="fa-solid fa-diagram-project"></i></span>
+                            <span>Knowledge Graph — Wiki</span>
+                        </button>
+                        <button class="graph-tab" data-graph="acled" role="tab" aria-selected="false">
+                            <span class="section-icon-badge acled"><i class="fa-solid fa-circle-nodes"></i></span>
+                            <span>Conflict Network — ACLED</span>
+                        </button>
+                    </div>
+                    <div class="graph-pane active" id="wiki-graph-pane" role="tabpanel">
+                    <div class="card-header">
+                        <h2>
+                            <span>Knowledge Graph — Wiki</span>
+                            <span class="info-tooltip tooltip-below">
+                                <i class="fa-regular fa-circle-question"></i>
+                                <span class="tooltip-text">Grafo delle connessioni semantiche tra le note validate del wiki. I nodi rappresentano entità operative (persone, organizzazioni, luoghi, accordi, asset, eventi, fonti) e i collegamenti ne evidenziano le relazioni descritte nel testo.</span>
+                            </span>
+                        </h2>
+                        <div class="graph-controls">
+                            <div class="graph-search-wrap">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="wiki-graph-search" placeholder="Cerca entità..." autocomplete="off">
+                                <button id="wiki-graph-search-clear" class="graph-search-clear" title="Cancella">&times;</button>
+                            </div>
+                            <div class="graph-filter-group" id="wiki-type-filters">
+                                <label class="graph-filter-chip active" data-type="all">
+                                    <input type="radio" name="wiki-type" value="all" checked> Tutti
+                                </label>
+                                <label class="graph-filter-chip" data-type="persona">
+                                    <input type="radio" name="wiki-type" value="persona"> <i class="fa-solid fa-user"></i> Persone
+                                </label>
+                                <label class="graph-filter-chip" data-type="organizzazione">
+                                    <input type="radio" name="wiki-type" value="organizzazione"> <i class="fa-solid fa-building"></i> Organizzazioni
+                                </label>
+                                <label class="graph-filter-chip" data-type="location">
+                                    <input type="radio" name="wiki-type" value="location"> <i class="fa-solid fa-location-dot"></i> Luoghi
+                                </label>
+                                <label class="graph-filter-chip" data-type="agreement">
+                                    <input type="radio" name="wiki-type" value="agreement"> <i class="fa-solid fa-file-lines"></i> Accordi
+                                </label>
+                                <label class="graph-filter-chip" data-type="asset">
+                                    <input type="radio" name="wiki-type" value="asset"> <i class="fa-solid fa-ship"></i> Asset
+                                </label>
+                                <label class="graph-filter-chip" data-type="event">
+                                    <input type="radio" name="wiki-type" value="event"> <i class="fa-solid fa-bolt"></i> Eventi
+                                </label>
+                                <label class="graph-filter-chip" data-type="source">
+                                    <input type="radio" name="wiki-type" value="source"> <i class="fa-solid fa-newspaper"></i> Fonti
+                                </label>
+                            </div>
+                            <button id="wiki-graph-reset" class="graph-btn-secondary" title="Ripristina vista">
+                                <i class="fa-solid fa-arrows-rotate"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                    <div class="graph-body">
+                        <div id="wiki-graph-canvas" class="graph-canvas"></div>
+                        <div id="wiki-graph-drawer" class="graph-drawer">
+                            <div class="graph-drawer-header">
+                                <span id="wiki-drawer-icon" class="graph-drawer-type-badge"></span>
+                                <span id="wiki-drawer-title" class="graph-drawer-title">Seleziona un nodo</span>
+                                <button class="graph-drawer-close" onclick="closeWikiDrawer()">&times;</button>
+                            </div>
+                            <div class="graph-drawer-meta" id="wiki-drawer-meta"></div>
+                            <div class="graph-drawer-preview" id="wiki-drawer-preview">Clicca su un nodo del grafo per vederne i dettagli.</div>
+                            <div id="wiki-drawer-action" style="padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); display: none;">
+                                <button id="btn-wiki-read-full" class="btn-primary" style="width: 100%; font-size: 0.72rem; padding: 6px 12px; display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(0, 229, 255, 0.15); border: 1px solid rgba(0, 229, 255, 0.4); color: #00e5ff; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                    <i class="fa-solid fa-book-open"></i> Leggi nota completa
+                                </button>
+                            </div>
+                            <div class="graph-drawer-links" id="wiki-drawer-links"></div>
+                        </div>
+                    </div>
+                    <div class="graph-stats" id="wiki-graph-stats"></div>
+                    </div>
+
+                    <div class="graph-pane" id="acled-graph-pane" role="tabpanel" hidden>
+                    <div class="card-header">
+                        <h2>
+                            <span>Conflict Network — ACLED</span>
+                            <span class="info-tooltip tooltip-below">
+                                <i class="fa-regular fa-circle-question"></i>
+                                <span class="tooltip-text">Rete degli attori armati estratta dal database ACLED. I nodi sono i gruppi/attori, i collegamenti rappresentano scontri registrati. Il colore degli archi indica la tipologia del conflitto; lo spessore rappresenta il numero di eventi.</span>
+                            </span>
+                        </h2>
+                        <div class="graph-controls">
+                            <div class="graph-search-wrap">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="acled-graph-search" placeholder="Cerca attore..." autocomplete="off">
+                                <button id="acled-graph-search-clear" class="graph-search-clear" title="Cancella">&times;</button>
+                            </div>
+                            <div class="graph-filter-group" id="acled-type-filters">
+                                <label class="graph-filter-chip active" data-country="all">
+                                    <input type="radio" name="acled-country" value="all" checked> Tutti i Paesi
+                                </label>
+                                <label class="graph-filter-chip" data-country="Libya">
+                                    <input type="radio" name="acled-country" value="Libya"> 🇱🇾 Libya
+                                </label>
+                                <label class="graph-filter-chip" data-country="Tunisia">
+                                    <input type="radio" name="acled-country" value="Tunisia"> 🇹🇳 Tunisia
+                                </label>
+                            </div>
+                            <div class="graph-slider-wrap">
+                                <label>Min. scontri: <strong id="acled-min-weight-val">1</strong></label>
+                                <input type="range" id="acled-min-weight" min="1" max="20" value="1" class="graph-slider">
+                            </div>
+                            <button id="acled-graph-reset" class="graph-btn-secondary" title="Ripristina vista">
+                                <i class="fa-solid fa-arrows-rotate"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                    <div class="graph-body">
+                        <div id="acled-graph-canvas" class="graph-canvas"></div>
+                        <div id="acled-graph-drawer" class="graph-drawer">
+                            <div class="graph-drawer-header">
+                                <span class="graph-drawer-type-badge" style="background:rgba(248,113,113,0.15); color:#f87171;"><i class="fa-solid fa-circle-nodes"></i></span>
+                                <span id="acled-drawer-title" class="graph-drawer-title">Seleziona un attore</span>
+                                <button class="graph-drawer-close" onclick="closeAcledDrawer()">&times;</button>
+                            </div>
+                            <div class="graph-drawer-meta" id="acled-drawer-meta"></div>
+                            <div class="graph-drawer-preview" id="acled-drawer-preview">Clicca su un nodo del grafo per vederne i dettagli operativi.</div>
+                            <div class="graph-drawer-links" id="acled-drawer-links"></div>
+                        </div>
+                    </div>
+                    <div class="graph-stats" id="acled-graph-stats"></div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- MODALE PER DETTAGLIO NOTA -->
+    <div id="note-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Titolo Nota</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-meta">
+                <span id="modal-date"><i class="fa-solid fa-calendar"></i> Data</span>
+                <span id="modal-admiralty"><i class="fa-solid fa-shield-halved"></i> Admiralty</span>
+                <span id="modal-sources"><i class="fa-solid fa-link"></i> Fonti</span>
+                <span id="modal-tipo"><i class="fa-solid fa-tag"></i> Tipo</span>
+            </div>
+            <div class="modal-body" id="modal-body">
+                Contenuto della nota...
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary close-modal-btn">Chiudi Dettaglio</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE PER DETTAGLIO MATRIX AGENTICA -->
+    <div id="matrix-detail-modal" class="intel-modal-overlay" style="display:none;">
+        <div class="intel-modal">
+            <div class="intel-modal-header">
+                <div class="intel-modal-title">
+                    <span id="matrix-modal-icon" style="margin-right: 8px;"></span>
+                    <span id="matrix-modal-title">Dettaglio Indicatore</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div id="matrix-modal-date" style="font-size: 0.75rem; color: #94a3b8; font-weight: normal; font-style: italic;"></div>
+                    <button class="intel-modal-close" onclick="document.getElementById('matrix-detail-modal').style.display='none'">&times;</button>
+                </div>
+            </div>
+            <div class="intel-modal-meta" id="matrix-modal-meta">
+                <!-- Badge di stato compilati via JS -->
+            </div>
+            <div class="intel-modal-body">
+                <div class="intel-modal-subtitle">Valutazione</div>
+                <div id="matrix-modal-detail-text" style="line-height: 1.6; font-size: 0.82rem; color: #e2e8f0; white-space: pre-wrap;">
+                    Caricamento dettagli...
+                </div>
+            </div>
+            <div class="intel-modal-footer" style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; background: rgba(8,16,35,0.4); border-radius: 0 0 14px 14px;">
+                <span id="matrix-modal-report-link-container"></span>
+                <button class="btn-tab" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8;" onclick="document.getElementById('matrix-detail-modal').style.display='none'">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Leaflet.js Script per Mappe -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    
+    <!-- Chart.js per i Grafici -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Flatpickr JS per il Calendario Date Range -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/it.js"></script>
+
+    <!-- Vis.js Network per i Grafi delle Relazioni -->
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+
+    <!-- Nostro Script -->
+    <script src="app.js?v=10"></script>
+</body>
+</html>
