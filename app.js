@@ -1,6 +1,6 @@
 // APP.JS - LOGICA DASHBOARD EARLY WARNING SYSTEM
 
-const HARDCODED_PASSWORD = ""; // Verrà compilata automaticamente dallo script static_exporter.py
+const HARDCODED_PASSWORD = "EwsSecurePassword2026!"; // Verrà compilata automaticamente dallo script static_exporter.py
 const API_URL = '/api/data';
 const RUN_EWS_URL = '/api/run_ews';
 
