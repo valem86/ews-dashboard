@@ -24,7 +24,7 @@
     <!-- Vis.js Network per Grafi delle Relazioni -->
     <link rel="stylesheet" href="https://unpkg.com/vis-network/styles/vis-network.min.css">
 
-    <link rel="stylesheet" href="style.css?v=19">
+    <link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
     <div class="app-container">
@@ -332,14 +332,11 @@
                     </div>
                     <div class="graph-pane active" id="wiki-graph-pane" role="tabpanel">
                     <div class="card-header">
-                        <h2>
-                            <span>Knowledge Graph — Wiki</span>
-                            <span class="info-tooltip tooltip-below">
+                        <div class="graph-controls">
+                            <span class="info-tooltip tooltip-below graph-help">
                                 <i class="fa-regular fa-circle-question"></i>
                                 <span class="tooltip-text">Grafo delle connessioni semantiche tra le note validate del wiki. I nodi rappresentano entità operative (persone, organizzazioni, luoghi, accordi, asset, eventi, fonti) e i collegamenti ne evidenziano le relazioni descritte nel testo.</span>
                             </span>
-                        </h2>
-                        <div class="graph-controls">
                             <div class="graph-search-wrap">
                                 <i class="fa-solid fa-magnifying-glass"></i>
                                 <input type="text" id="wiki-graph-search" placeholder="Cerca entità..." autocomplete="off">
@@ -399,14 +396,11 @@
 
                     <div class="graph-pane" id="acled-graph-pane" role="tabpanel" hidden>
                     <div class="card-header">
-                        <h2>
-                            <span>Conflict Network — ACLED</span>
-                            <span class="info-tooltip tooltip-below">
+                        <div class="graph-controls">
+                            <span class="info-tooltip tooltip-below graph-help">
                                 <i class="fa-regular fa-circle-question"></i>
                                 <span class="tooltip-text">Rete degli attori armati estratta dal database ACLED. I nodi sono i gruppi/attori, i collegamenti rappresentano scontri registrati. Il colore degli archi indica la tipologia del conflitto; lo spessore rappresenta il numero di eventi.</span>
                             </span>
-                        </h2>
-                        <div class="graph-controls">
                             <div class="graph-search-wrap">
                                 <i class="fa-solid fa-magnifying-glass"></i>
                                 <input type="text" id="acled-graph-search" placeholder="Cerca attore..." autocomplete="off">

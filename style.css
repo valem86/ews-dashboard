@@ -2780,6 +2780,8 @@ body::after {
     }
 
     .graph-canvas {
+        flex: none;      /* annulla flex:1 (basis 0) che collasserebbe l'altezza in colonna */
+        width: 100%;
         height: 380px;
         border-radius: 0;
     }
