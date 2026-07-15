@@ -2366,18 +2366,18 @@ body::after {
 
 /* Essendo il primo elemento a sinistra nei controlli, il tooltip centrato
    (left:50% + translateX(-50%)) uscirebbe dal bordo sinistro dello schermo:
-   lo ancoriamo a sinistra dell'icona così si apre verso destra. */
-.graph-help .tooltip-text {
-    left: 0;
-    transform: none;
-}
-
-.graph-help:hover .tooltip-text {
-    transform: translateY(5px);
-}
-
-.info-tooltip.graph-help.tooltip-open .tooltip-text {
-    transform: translateY(5px);
+   su DESKTOP lo ancoriamo a sinistra dell'icona (si apre verso destra).
+   Serve alta specificità (0,5,0) per battere le regole .info-tooltip.tooltip-below:hover
+   (0,4,0) che altrimenti ri-applicherebbero translateX(-50%) portandolo fuori schermo.
+   Racchiuso in min-width:769px per non interferire con l'overlay centrato mobile. */
+@media (min-width: 769px) {
+    .info-tooltip.tooltip-below.graph-help .tooltip-text,
+    .info-tooltip.tooltip-below.graph-help:hover .tooltip-text,
+    .info-tooltip.tooltip-below.graph-help.tooltip-open .tooltip-text {
+        left: 0;
+        right: auto;
+        transform: translateY(5px);
+    }
 }
 
 /* ---- Emblema circolare coerente per icone di sezione (FontAwesome) ---- */
