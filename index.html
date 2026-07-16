@@ -253,25 +253,33 @@
                                 <span class="tooltip-text">Mappa interattiva per il monitoraggio della flotta e delle attività delle navi SAR delle ONG operanti nel Mediterraneo Centrale. Mostra la posizione in tempo reale, la rotta e lo stato del transponder AIS.</span>
                             </span></span>
                         </h2>
-                        <div class="map-filters">
-                            <button id="map-reset-btn" class="graph-btn-secondary" title="Ripristina vista mappa">
-                                <i class="fa-solid fa-arrows-rotate"></i> Reset
-                            </button>
-                            <div class="dropdown-multiselect" id="ship-dropdown">
-                                <button class="dropdown-btn" id="ship-dropdown-btn">
-                                    <span>Filtra navi</span>
-                                    <i class="fa-solid fa-chevron-down"></i>
+                        <div class="map-filters-container">
+                            <div class="map-filters">
+                                <button id="map-reset-btn" class="graph-btn-secondary" title="Ripristina vista mappa">
+                                    <i class="fa-solid fa-arrows-rotate"></i> Reset
                                 </button>
-                                <div class="dropdown-content" id="ship-dropdown-content">
-                                    <label class="dropdown-option">
-                                        <input type="checkbox" id="ship-select-all" checked>
-                                        <span>Seleziona tutte</span>
-                                    </label>
-                                    <hr class="dropdown-divider">
-                                    <div id="ship-checkboxes-container">
-                                        <!-- Popolato dinamicamente da JS -->
+                                <div class="dropdown-multiselect" id="ship-dropdown">
+                                    <button class="dropdown-btn" id="ship-dropdown-btn">
+                                        <span>Filtra navi</span>
+                                        <i class="fa-solid fa-chevron-down"></i>
+                                    </button>
+                                    <div class="dropdown-content" id="ship-dropdown-content">
+                                        <label class="dropdown-option">
+                                            <input type="checkbox" id="ship-select-all" checked>
+                                            <span>Seleziona tutte</span>
+                                        </label>
+                                        <hr class="dropdown-divider">
+                                        <div id="ship-checkboxes-container">
+                                            <!-- Popolato dinamicamente da JS -->
+                                        </div>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="map-acled-toggle-wrap">
+                                <label>
+                                    <input type="checkbox" id="map-acled-toggle" checked>
+                                    <span>Eventi ACLED (Georeferenziati)</span>
+                                </label>
                             </div>
                         </div>
                     </div>

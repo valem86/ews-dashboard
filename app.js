@@ -1323,20 +1323,19 @@ function initAcledMapLayer(acledEvents) {
         addedCount++;
     });
 
-    // Aggiungiamo il layer solo se ci sono marker filtrati
+    // Aggiungiamo il layer solo se ci sono marker filtrati e se la checkbox nativa è attiva
+    const toggleEl = document.getElementById('map-acled-toggle');
+    const isChecked = toggleEl ? toggleEl.checked : true;
+
     if (addedCount > 0) {
-        acledLayer.addTo(map);
+        if (isChecked) {
+            acledLayer.addTo(map);
+        }
 
-        // Aggiunge il layer control per consentire di spegnere gli eventi ACLED
-        const overlayLayers = {
-            'Eventi ACLED (Georeferenziati)': acledLayer
-        };
-        acledLayerControl = L.control.layers(null, overlayLayers, { collapsed: false, position: 'topright' }).addTo(map);
-
-        // Popola la legenda statica sotto la mappa
+        // Popola la legenda statica sotto la mappa se attiva
         const legendEl = document.getElementById('acled-map-legend');
         if (legendEl) {
-            legendEl.style.display = 'flex';
+            legendEl.style.display = isChecked ? 'flex' : 'none';
             legendEl.innerHTML = `
                 <div class="map-legend-item"><span class="map-legend-color" style="background:#ef4444;"></span>Scontri</div>
                 <div class="map-legend-item"><span class="map-legend-color" style="background:#dc2626;"></span>Violenza vs Civili</div>
@@ -1533,10 +1532,36 @@ function setupEventListeners() {
             checkboxes.forEach(cb => cb.checked = true);
             const selectAll = document.getElementById('ship-select-all');
             if (selectAll) selectAll.checked = true;
+
+            // Reset toggle ACLED
+            const acledToggle = document.getElementById('map-acled-toggle');
+            if (acledToggle) acledToggle.checked = true;
             
-            // Re-renderizza le navi sulla mappa (ripristina lo zoom iniziale)
+            // Re-renderizza le navi e gli eventi ACLED (ripristina lo zoom iniziale)
             if (dbData) {
                 renderShipsOnMap(dbData.ngo_ships);
+                initAcledMapLayer(dbData.acled_events || []);
+            }
+        });
+    }
+
+    // Toggle eventi ACLED sulla mappa
+    const mapAcledToggle = document.getElementById('map-acled-toggle');
+    if (mapAcledToggle) {
+        mapAcledToggle.addEventListener('change', () => {
+            const isChecked = mapAcledToggle.checked;
+            if (acledLayer) {
+                if (isChecked) {
+                    acledLayer.addTo(map);
+                } else {
+                    map.removeLayer(acledLayer);
+                }
+            }
+            // Aggiorna visibilità della legenda
+            const legendEl = document.getElementById('acled-map-legend');
+            if (legendEl) {
+                const hasEvents = acledLayer && acledLayer.getLayers && acledLayer.getLayers().length > 0;
+                legendEl.style.display = (isChecked && hasEvents) ? 'flex' : 'none';
             }
         });
     }

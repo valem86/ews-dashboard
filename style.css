@@ -1225,10 +1225,44 @@ body::after {
 /* =========================================================
    DROPDOWN MULTISELECT
    ========================================================= */
+.map-filters-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
 .map-filters {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.map-acled-toggle-wrap {
+    display: flex;
+    align-items: center;
+}
+
+.map-acled-toggle-wrap label {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    user-select: none;
+    transition: color 0.2s;
+}
+
+.map-acled-toggle-wrap label:hover {
+    color: #cbd5e1;
+}
+
+.map-acled-toggle-wrap input[type="checkbox"] {
+    accent-color: var(--accent-blue) !important;
+    cursor: pointer;
+    width: 13px;
+    height: 13px;
 }
 
 .dropdown-multiselect {
@@ -1342,6 +1376,11 @@ body::after {
         align-items: stretch;
         gap: 12px;
         padding: 12px 15px;
+    }
+
+    .map-filters-container {
+        align-items: stretch;
+        width: 100%;
     }
 
     .card-header h2 {
