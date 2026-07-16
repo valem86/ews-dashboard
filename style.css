@@ -536,16 +536,10 @@ body::after {
 }
 
 .map-container-equal {
-    height: 470px; /* Aumentiamo per fare spazio alla legenda inferiore */
+    height: 540px; /* Aumentiamo per fare spazio alla legenda inferiore ed equilibrare il full-width */
     padding: 0;
     display: flex;
     flex-direction: column;
-}
-
-/* Riga inferiore: header uniformi → mappa e timeline stessa altezza card */
-.map-card .card-header,
-.timeline-card .card-header {
-    min-height: 110px;
 }
 
 #map {
@@ -1234,6 +1228,7 @@ body::after {
 .map-filters {
     display: flex;
     align-items: center;
+    gap: 10px;
 }
 
 .dropdown-multiselect {

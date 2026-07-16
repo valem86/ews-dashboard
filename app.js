@@ -1524,6 +1524,23 @@ function setupEventListeners() {
         });
     }
 
+    // Reset mappa ONG (ripristina filtri e zoom iniziale)
+    const mapResetBtn = document.getElementById('map-reset-btn');
+    if (mapResetBtn) {
+        mapResetBtn.addEventListener('click', () => {
+            // Seleziona tutte le checkbox delle navi
+            const checkboxes = document.querySelectorAll('#ship-checkboxes-container input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = true);
+            const selectAll = document.getElementById('ship-select-all');
+            if (selectAll) selectAll.checked = true;
+            
+            // Re-renderizza le navi sulla mappa (ripristina lo zoom iniziale)
+            if (dbData) {
+                renderShipsOnMap(dbData.ngo_ships);
+            }
+        });
+    }
+
     // Flatpickr gestisce autonomamente il callback onChange su #date-range
 
     // Chiusura Modale (supporto sia per la "X" che per il pulsante "Chiudi Dettaglio" nel footer)
@@ -1749,15 +1766,55 @@ function getWikiNodeStyle(tipo) {
     return WIKI_NODE_COLORS[tipo] || WIKI_NODE_COLORS['assertion'];
 }
 
+// (A) Layout seed: ogni tipo ha una regione di partenza nel canvas
+// per ridurre il caos iniziale del force-directed layout
+const WIKI_TYPE_LAYOUT = {
+    persona:        { angle: 0,    radius: 320 },
+    organizzazione: { angle: 60,   radius: 320 },
+    location:       { angle: 120,  radius: 320 },
+    agreement:      { angle: 180,  radius: 320 },
+    asset:          { angle: 240,  radius: 320 },
+    event:          { angle: 300,  radius: 320 },
+    source:         { angle: 30,   radius: 480 },
+    assertion:      { angle: 150,  radius: 480 },
+    'wisdom-note':  { angle: 270,  radius: 480 },
+};
+
 function buildWikiVisDatasets(graphData, typeFilter) {
     const nodes = [];
     const edges = [];
 
+    // Conta quante note per tipo per distribuire angolarmente
+    const typeCounters = {};
     const visibleIds = new Set();
+
     graphData.nodes.forEach(n => {
         if (typeFilter !== 'all' && n.type !== typeFilter) return;
         visibleIds.add(n.id);
+        typeCounters[n.type] = (typeCounters[n.type] || 0) + 1;
+    });
+
+    // Indice corrente per ogni tipo (per distribuire lungo l'arco)
+    const typeIndex = {};
+
+    graphData.nodes.forEach(n => {
+        if (!visibleIds.has(n.id)) return;
         const style = getWikiNodeStyle(n.type);
+        const layout = WIKI_TYPE_LAYOUT[n.type] || { angle: 0, radius: 350 };
+        const count = typeCounters[n.type] || 1;
+        const idx = typeIndex[n.type] || 0;
+        typeIndex[n.type] = idx + 1;
+        // Distribuisce i nodi lungo un arco di 50° attorno all'angolo del tipo
+        const spread = Math.min(50, count * 6);
+        const angleOffset = count > 1 ? (idx / (count - 1) - 0.5) * spread : 0;
+        const rad = (layout.angle + angleOffset) * Math.PI / 180;
+        const jitter = (Math.random() - 0.5) * 60;
+
+        // (B-lite) Spessore bordo proporzionale alle connessioni del nodo
+        const conns = n.connections || 0;
+        const nodeSize = 16 + Math.min(conns, 14) * 1.8;
+        const borderW = conns > 5 ? 2.5 : conns > 2 ? 2 : 1.5;
+
         nodes.push({
             id: n.id,
             label: n.label.length > 22 ? n.label.slice(0, 20) + '…' : n.label,
@@ -1765,23 +1822,32 @@ function buildWikiVisDatasets(graphData, typeFilter) {
             title: n.label,
             color: { background: style.bg, border: style.border, highlight: { background: style.bg, border: '#fff' } },
             font: { color: style.font, size: 11, face: 'Inter' },
-            borderWidth: 1.5,
-            borderWidthSelected: 2.5,
-            size: 18 + Math.min(n.connections || 0, 12) * 1.5,
+            borderWidth: borderW,
+            borderWidthSelected: borderW + 1.5,
+            size: nodeSize,
             shape: 'dot',
+            // Posizione iniziale stratificata per tipo (Proposta A)
+            x: Math.cos(rad) * layout.radius + jitter,
+            y: Math.sin(rad) * layout.radius + jitter,
             _raw: n
         });
     });
 
     graphData.edges.forEach((e, idx) => {
         if (!visibleIds.has(e.from) || !visibleIds.has(e.to)) return;
+        // (B-lite) Spessore arco basato sul grado medio dei due nodi connessi
+        const fromNode = graphData.nodes.find(n => n.id === e.from);
+        const toNode   = graphData.nodes.find(n => n.id === e.to);
+        const avgDeg = ((fromNode?.connections || 0) + (toNode?.connections || 0)) / 2;
+        const edgeWidth = avgDeg > 8 ? 2.5 : avgDeg > 4 ? 1.8 : 1;
+
         edges.push({
             id: idx,
             from: e.from,
             to: e.to,
-            color: { color: 'rgba(148,163,184,0.25)', highlight: 'rgba(129,140,248,0.8)' },
-            width: 1,
-            smooth: { type: 'continuous' }
+            color: { color: 'rgba(148,163,184,0.22)', highlight: 'rgba(129,140,248,0.9)' },
+            width: edgeWidth,
+            smooth: { type: 'dynamic' }   // dynamic: gli archi seguono i nodi in tempo reale senza fisica
         });
     });
 
@@ -1807,56 +1873,166 @@ function renderWikiGraph(graphData) {
     const container = document.getElementById('wiki-graph-canvas');
     if (!container) return;
 
+    // (C) Stato ego-network: traccia l'ID del nodo attualmente in focus
+    let wikiEgoFocusId = null;
+
+    // Applica o rimuove il dimming dell'ego-network
+    function applyWikiEgoFocus(nodeId, nodesDataset, edgesDataset) {
+        if (!nodeId) {
+            // Reset: tutti i nodi tornano al loro colore originale
+            const updates = nodesDataset.get().map(n => {
+                const rawNode = graphData.nodes.find(r => r.id === n.id);
+                const style = getWikiNodeStyle(rawNode?.type || 'assertion');
+                return {
+                    id: n.id,
+                    color: { background: style.bg, border: style.border, highlight: { background: style.bg, border: '#fff' } },
+                    font: { color: style.font, size: 11, face: 'Inter' },
+                    opacity: 1
+                };
+            });
+            nodesDataset.update(updates);
+            edgesDataset.update(edgesDataset.get().map(e => ({
+                id: e.id,
+                color: { color: 'rgba(148,163,184,0.22)', highlight: 'rgba(129,140,248,0.9)' },
+                width: e.width || 1
+            })));
+            return;
+        }
+
+        // Calcola i vicini diretti del nodo
+        const neighborIds = new Set([nodeId]);
+        const activeEdgeIds = new Set();
+        edgesDataset.get().forEach(e => {
+            if (e.from === nodeId || e.to === nodeId) {
+                neighborIds.add(e.from);
+                neighborIds.add(e.to);
+                activeEdgeIds.add(e.id);
+            }
+        });
+
+        // Aggiorna i nodi: vicini = vividi, altri = quasi invisibili
+        const nodeUpdates = nodesDataset.get().map(n => {
+            const isNeighbor = neighborIds.has(n.id);
+            const rawNode = graphData.nodes.find(r => r.id === n.id);
+            const style = getWikiNodeStyle(rawNode?.type || 'assertion');
+            if (isNeighbor) {
+                return { id: n.id,
+                    color: { background: style.bg, border: style.border, highlight: { background: style.bg, border: '#fff' } },
+                    font: { color: style.font, size: 11, face: 'Inter' },
+                    opacity: 1 };
+            } else {
+                return { id: n.id,
+                    color: { background: 'rgba(30,41,59,0.3)', border: 'rgba(100,116,139,0.2)' },
+                    font: { color: 'rgba(148,163,184,0.25)', size: 11, face: 'Inter' },
+                    opacity: 0.15 };
+            }
+        });
+        nodesDataset.update(nodeUpdates);
+
+        // Aggiorna gli archi: quelli del vicinato = evidenziati, altri = quasi invisibili
+        const edgeUpdates = edgesDataset.get().map(e => {
+            if (activeEdgeIds.has(e.id)) {
+                return { id: e.id, color: { color: 'rgba(129,140,248,0.85)', highlight: 'rgba(129,140,248,1)' }, width: Math.max(e.width || 1, 2) };
+            } else {
+                return { id: e.id, color: { color: 'rgba(100,116,139,0.06)' }, width: 0.5 };
+            }
+        });
+        edgesDataset.update(edgeUpdates);
+    }
+
     function redrawWiki(typeFilter) {
         currentTypeFilter = typeFilter;
+        wikiEgoFocusId = null;
         const { nodes, edges } = buildWikiVisDatasets(graphData, typeFilter);
+        const nodesDS = new vis.DataSet(nodes);
+        const edgesDS = new vis.DataSet(edges);
 
+        // Fisica sempre attiva a bassa intensità: damping alto = assestamento rapido (<0.5s),
+        // maxVelocity basso = nessun rimbalzo. A riposo costo CPU ~0%, durante drag = fluido.
         const options = {
             physics: {
                 enabled: true,
                 solver: 'barnesHut',
                 barnesHut: {
-                    gravitationalConstant: -3000,
-                    centralGravity: 0.25,
-                    springLength: 110,
-                    springConstant: 0.04,
-                    damping: 0.12,
-                    avoidOverlap: 0.15
+                    gravitationalConstant: -1200,
+                    centralGravity: 0.08,
+                    springLength: 140,
+                    springConstant: 0.02,
+                    damping: 0.92,          // altissimo: assestamento in ~0.4s
+                    avoidOverlap: 0.5
                 },
-                stabilization: { enabled: true, iterations: 180, updateInterval: 30 }
+                maxVelocity: 6,             // velocità massima ridotta: nessun rimbalzo
+                minVelocity: 0.05,          // soglia di quiete: la fisica si sospende automaticamente
+                stabilization: { enabled: true, iterations: 150, updateInterval: 25 }
             },
-            interaction: { hover: true, tooltipDelay: 200, hideEdgesOnDrag: true },
+            interaction: {
+                hover: true,
+                tooltipDelay: 150,
+                hideEdgesOnDrag: false,     // archi sempre visibili durante il drag
+                keyboard: { enabled: true }
+            },
             nodes: { shadow: { enabled: true, size: 6, color: 'rgba(0,0,0,0.3)' } },
-            edges: { selectionWidth: 2 }
+            edges: { selectionWidth: 2.5, arrowStrikethrough: false }
         };
 
         if (wikiNetwork) {
-            wikiNetwork.setData({ nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) });
-            wikiNetwork.setOptions({ physics: { enabled: true, stabilization: { iterations: 180 } } });
+            wikiNetwork.setData({ nodes: nodesDS, edges: edgesDS });
+            wikiNetwork.setOptions({ physics: { enabled: true, stabilization: { enabled: false } } });
         } else {
-            wikiNetwork = new vis.Network(container,
-                { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) },
-                options
-            );
+            wikiNetwork = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, options);
         }
 
-        // Aggiorna immediatamente le statistiche per pulire i contatori in caso di categorie vuote
         updateWikiStats(nodes.length, edges.length);
+        // Nessuno spegnimento della fisica: rimane sempre attiva a bassa intensità.
+        // Vis.js la mette in idle automaticamente quando minVelocity è raggiunta.
 
-        // Ferma la fisica dopo la stabilizzazione (performance)
-        wikiNetwork.once('stabilizationIterationsDone', () => {
-            wikiNetwork.setOptions({ physics: { enabled: false } });
-        });
-
-        // Click su nodo → apre drawer
+        // (C) Click su nodo → ego-network focus + apre drawer
         wikiNetwork.off('click');
         wikiNetwork.on('click', params => {
             if (params.nodes.length > 0) {
                 const nodeId = params.nodes[0];
-                const rawNode = graphData.nodes.find(n => n.id === nodeId);
-                if (rawNode) openWikiDrawer(rawNode, graphData);
+                if (wikiEgoFocusId === nodeId) {
+                    // Secondo click sullo stesso nodo: reset focus
+                    wikiEgoFocusId = null;
+                    applyWikiEgoFocus(null, nodesDS, edgesDS);
+                    closeWikiDrawer();
+                } else {
+                    wikiEgoFocusId = nodeId;
+                    applyWikiEgoFocus(nodeId, nodesDS, edgesDS);
+                    const rawNode = graphData.nodes.find(n => n.id === nodeId);
+                    if (rawNode) openWikiDrawer(rawNode, graphData);
+                }
             } else {
+                // Click su sfondo: reset focus
+                if (wikiEgoFocusId) {
+                    wikiEgoFocusId = null;
+                    applyWikiEgoFocus(null, nodesDS, edgesDS);
+                }
                 closeWikiDrawer();
+            }
+        });
+
+        // Tasto ESC per resettare il focus
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && wikiEgoFocusId) {
+                wikiEgoFocusId = null;
+                applyWikiEgoFocus(null, nodesDS, edgesDS);
+                closeWikiDrawer();
+            }
+        }, { once: false });
+
+        // --- Pin nodo nella posizione di rilascio ---
+        // Al dragEnd, il nodo viene fissato esattamente dove è stato lasciato.
+        // La fisica rimane attiva per gli altri nodi liberi che si adattano attorno.
+        // Le posizioni pinnate vengono azzerate solo dal Reset (redraw completo).
+        wikiNetwork.off('dragEnd');
+        wikiNetwork.on('dragEnd', (params) => {
+            if (params.nodes && params.nodes.length > 0) {
+                const nodeId = params.nodes[0];
+                const pos = wikiNetwork.getPositions([nodeId])[nodeId];
+                if (pos) {
+                    nodesDS.update({ id: nodeId, x: pos.x, y: pos.y, fixed: { x: true, y: true } });
+                }
             }
         });
     }
@@ -1896,11 +2072,28 @@ function renderWikiGraph(graphData) {
         }
     }
 
-    // --- Reset ---
+    // --- Reset completo: ridisegna il grafo da zero, ripristina filtri e stato UI ---
     const resetBtn = document.getElementById('wiki-graph-reset');
     if (resetBtn) resetBtn.addEventListener('click', () => {
-        if (wikiNetwork) wikiNetwork.fit({ animation: { duration: 500, easingFunction: 'easeInOutQuad' } });
+        // Reset chip UI al filtro "Tutti"
+        document.querySelectorAll('#wiki-type-filters .graph-filter-chip').forEach(c => {
+            c.classList.remove('active');
+            const inp = c.querySelector('input');
+            if (inp) inp.checked = false;
+        });
+        const allChip = document.querySelector('#wiki-type-filters .graph-filter-chip[data-type="all"]');
+        if (allChip) {
+            allChip.classList.add('active');
+            const inp = allChip.querySelector('input');
+            if (inp) inp.checked = true;
+        }
+        // Hard redraw: ricostruisce il grafo con posizioni iniziali e filtro "all"
+        redrawWiki('all');
         closeWikiDrawer();
+        // Fit dopo stabilizzazione
+        if (wikiNetwork) wikiNetwork.once('stabilizationIterationsDone', () => {
+            wikiNetwork.fit({ animation: { duration: 600, easingFunction: 'easeInOutQuad' } });
+        });
     });
 }
 
@@ -2101,54 +2294,150 @@ function renderAcledGraph(graphData) {
     const container = document.getElementById('acled-graph-canvas');
     if (!container) return;
 
+    // (C) Ego-network focus per ACLED
+    let acledEgoFocusId = null;
+
+    function applyAcledEgoFocus(nodeId, nodesDS, edgesDS) {
+        if (!nodeId) {
+            // Reset: tutti i nodi tornano al loro stato originale
+            nodesDS.update(nodesDS.get().map(n => {
+                const rawNode = graphData.nodes.find(r => r.id === n.id);
+                const isFatal = rawNode && rawNode.total_fatalities > 0;
+                return { id: n.id,
+                    color: {
+                        background: isFatal ? 'rgba(239,68,68,0.2)' : 'rgba(148,163,184,0.12)',
+                        border: isFatal ? '#ef4444' : '#64748b',
+                        highlight: { background: 'rgba(239,68,68,0.35)', border: '#fca5a5' }
+                    },
+                    font: { color: isFatal ? '#fca5a5' : '#94a3b8', size: 10, face: 'Inter' },
+                    opacity: 1 };
+            }));
+            edgesDS.update(edgesDS.get().map(e => {
+                const rawEdge = graphData.edges.find(r => r.from === e.from && r.to === e.to);
+                const ec = getAcledEdgeColor(rawEdge?.types);
+                return { id: e.id, color: { color: ec.color + '99', highlight: ec.highlight, opacity: 0.75 } };
+            }));
+            return;
+        }
+
+        const neighborIds = new Set([nodeId]);
+        const activeEdgeIds = new Set();
+        edgesDS.get().forEach(e => {
+            if (e.from === nodeId || e.to === nodeId) {
+                neighborIds.add(e.from);
+                neighborIds.add(e.to);
+                activeEdgeIds.add(e.id);
+            }
+        });
+
+        nodesDS.update(nodesDS.get().map(n => {
+            if (neighborIds.has(n.id)) {
+                const rawNode = graphData.nodes.find(r => r.id === n.id);
+                const isFatal = rawNode && rawNode.total_fatalities > 0;
+                return { id: n.id,
+                    color: {
+                        background: isFatal ? 'rgba(239,68,68,0.25)' : 'rgba(148,163,184,0.18)',
+                        border: isFatal ? '#ef4444' : '#94a3b8',
+                    },
+                    font: { color: isFatal ? '#fca5a5' : '#cbd5e1', size: 11, face: 'Inter' },
+                    opacity: 1 };
+            } else {
+                return { id: n.id,
+                    color: { background: 'rgba(15,23,42,0.3)', border: 'rgba(100,116,139,0.15)' },
+                    font: { color: 'rgba(148,163,184,0.2)', size: 10, face: 'Inter' },
+                    opacity: 0.12 };
+            }
+        }));
+
+        edgesDS.update(edgesDS.get().map(e => {
+            if (activeEdgeIds.has(e.id)) {
+                const rawEdge = graphData.edges.find(r => r.from === e.from && r.to === e.to);
+                const ec = getAcledEdgeColor(rawEdge?.types);
+                return { id: e.id, color: { color: ec.highlight, highlight: ec.highlight }, width: Math.max((e.width || 1) + 1.5, 3) };
+            } else {
+                return { id: e.id, color: { color: 'rgba(100,116,139,0.05)' }, width: 0.5 };
+            }
+        }));
+    }
+
     function redrawAcled(countryFilter, minWeight) {
         currentCountry = countryFilter;
         currentMinWeight = minWeight;
+        acledEgoFocusId = null;
         const { nodes, edges } = buildAcledVisDatasets(graphData, countryFilter, minWeight);
+        const nodesDS = new vis.DataSet(nodes);
+        const edgesDS = new vis.DataSet(edges);
 
+        // Fisica sempre attiva a bassa intensità (identico al wiki graph)
         const options = {
             physics: {
                 enabled: true,
                 solver: 'barnesHut',
                 barnesHut: {
-                    gravitationalConstant: -4000,
-                    centralGravity: 0.2,
-                    springLength: 130,
-                    springConstant: 0.03,
-                    damping: 0.1,
-                    avoidOverlap: 0.2
+                    gravitationalConstant: -1800,
+                    centralGravity: 0.08,
+                    springLength: 160,
+                    springConstant: 0.02,
+                    damping: 0.92,
+                    avoidOverlap: 0.5
                 },
-                stabilization: { enabled: true, iterations: 150, updateInterval: 25 }
+                maxVelocity: 8,
+                minVelocity: 0.05,
+                stabilization: { enabled: true, iterations: 120, updateInterval: 25 }
             },
-            interaction: { hover: true, tooltipDelay: 200, hideEdgesOnDrag: true },
-            nodes: { shadow: { enabled: true, size: 8, color: 'rgba(0,0,0,0.4)' } }
+            interaction: {
+                hover: true,
+                tooltipDelay: 150,
+                hideEdgesOnDrag: false      // archi sempre visibili durante il drag
+            },
+            nodes: { shadow: { enabled: true, size: 8, color: 'rgba(0,0,0,0.4)' } },
+            edges: { selectionWidth: 3, smooth: { type: 'dynamic' } }
         };
 
         if (acledNetwork) {
-            acledNetwork.setData({ nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) });
-            acledNetwork.setOptions({ physics: { enabled: true, stabilization: { iterations: 150 } } });
+            acledNetwork.setData({ nodes: nodesDS, edges: edgesDS });
+            acledNetwork.setOptions({ physics: { enabled: true, stabilization: { enabled: false } } });
         } else {
-            acledNetwork = new vis.Network(container,
-                { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) },
-                options
-            );
+            acledNetwork = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, options);
         }
 
         updateAcledStats(nodes.length, edges.length, graphData);
+        // Nessuno spegnimento della fisica: Vis.js entra in idle automaticamente.
 
-        acledNetwork.once('stabilizationIterationsDone', () => {
-            acledNetwork.setOptions({ physics: { enabled: false } });
-        });
-
+        // (C) Click su nodo ACLED → ego-network focus
         acledNetwork.off('click');
         acledNetwork.on('click', params => {
             if (params.nodes.length > 0) {
                 const nodeId = params.nodes[0];
-                const rawNode = graphData.nodes.find(n => n.id === nodeId);
-                const connectedEdges = graphData.edges.filter(e => e.from === nodeId || e.to === nodeId);
-                if (rawNode) openAcledDrawer(rawNode, connectedEdges, graphData);
+                if (acledEgoFocusId === nodeId) {
+                    acledEgoFocusId = null;
+                    applyAcledEgoFocus(null, nodesDS, edgesDS);
+                    closeAcledDrawer();
+                } else {
+                    acledEgoFocusId = nodeId;
+                    applyAcledEgoFocus(nodeId, nodesDS, edgesDS);
+                    const rawNode = graphData.nodes.find(n => n.id === nodeId);
+                    const connEdges = graphData.edges.filter(e => e.from === nodeId || e.to === nodeId);
+                    if (rawNode) openAcledDrawer(rawNode, connEdges, graphData);
+                }
             } else {
+                if (acledEgoFocusId) {
+                    acledEgoFocusId = null;
+                    applyAcledEgoFocus(null, nodesDS, edgesDS);
+                }
                 closeAcledDrawer();
+            }
+        });
+
+        // --- Pin nodo nella posizione di rilascio (ACLED) ---
+        acledNetwork.off('dragEnd');
+        acledNetwork.on('dragEnd', (params) => {
+            if (params.nodes && params.nodes.length > 0) {
+                const nodeId = params.nodes[0];
+                const pos = acledNetwork.getPositions([nodeId])[nodeId];
+                if (pos) {
+                    nodesDS.update({ id: nodeId, x: pos.x, y: pos.y, fixed: { x: true, y: true } });
+                }
             }
         });
     }
@@ -2201,11 +2490,32 @@ function renderAcledGraph(graphData) {
         }
     }
 
-    // --- Reset ---
+    // --- Reset completo ACLED: ridisegna da zero, ripristina filtri, slider e stato ---
     const resetBtn = document.getElementById('acled-graph-reset');
     if (resetBtn) resetBtn.addEventListener('click', () => {
-        if (acledNetwork) acledNetwork.fit({ animation: { duration: 500, easingFunction: 'easeInOutQuad' } });
+        // Reset chip paese su "Tutti"
+        document.querySelectorAll('#acled-type-filters .graph-filter-chip').forEach(c => {
+            c.classList.remove('active');
+            const inp = c.querySelector('input');
+            if (inp) inp.checked = false;
+        });
+        const allChip = document.querySelector('#acled-type-filters .graph-filter-chip[data-country="all"]');
+        if (allChip) {
+            allChip.classList.add('active');
+            const inp = allChip.querySelector('input');
+            if (inp) inp.checked = true;
+        }
+        // Reset slider a 1
+        const sl = document.getElementById('acled-min-weight');
+        const slVal = document.getElementById('acled-min-weight-val');
+        if (sl) sl.value = 1;
+        if (slVal) slVal.textContent = '1';
+        // Hard redraw
+        redrawAcled('all', 1);
         closeAcledDrawer();
+        if (acledNetwork) acledNetwork.once('stabilizationIterationsDone', () => {
+            acledNetwork.fit({ animation: { duration: 600, easingFunction: 'easeInOutQuad' } });
+        });
     });
 }
 

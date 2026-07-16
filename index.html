@@ -24,7 +24,7 @@
     <!-- Vis.js Network per Grafi delle Relazioni -->
     <link rel="stylesheet" href="https://unpkg.com/vis-network/styles/vis-network.min.css">
 
-    <link rel="stylesheet" href="style.css?v=26">
+    <link rel="stylesheet" href="style.css?v=30">
 </head>
 <body>
     <div class="app-container">
@@ -242,80 +242,79 @@
             </div>
 
             
-            <!-- 3. MAPPA E TIMELINE (Affiancati, sotto, stessa altezza) -->
-            <div class="bottom-grid">
-                
-                <!-- Colonna Sinistra: Mappa Flotta ONG -->
-                <section class="left-panel">
-                    <div class="card map-card">
-                        <div class="card-header">
-                            <h2>
-                                <img src="assets/c2_logo_fleet_1783429638355.jpg" alt="" class="section-logo">
-                                <span>Posizionamento ONG nel Mar Mediterraneo&nbsp;<span class="info-tooltip">
-                                    <i class="fa-regular fa-circle-question"></i>
-                                    <span class="tooltip-text">Mappa interattiva per il monitoraggio della flotta e delle attività delle navi SAR delle ONG operanti nel Mediterraneo Centrale. Mostra la posizione in tempo reale, la rotta e lo stato del transponder AIS.</span>
-                                </span></span>
-                            </h2>
-                            <div class="map-filters">
-                                <div class="dropdown-multiselect" id="ship-dropdown">
-                                    <button class="dropdown-btn" id="ship-dropdown-btn">
-                                        <span>Filtra navi</span>
-                                        <i class="fa-solid fa-chevron-down"></i>
-                                    </button>
-                                    <div class="dropdown-content" id="ship-dropdown-content">
-                                        <label class="dropdown-option">
-                                            <input type="checkbox" id="ship-select-all" checked>
-                                            <span>Seleziona tutte</span>
-                                        </label>
-                                        <hr class="dropdown-divider">
-                                        <div id="ship-checkboxes-container">
-                                            <!-- Popolato dinamicamente da JS -->
-                                        </div>
+            <!-- 3. MAPPA FLOTTA ONG (Tutta larghezza) -->
+            <section class="full-width-panel">
+                <div class="card map-card">
+                    <div class="card-header">
+                        <h2>
+                            <img src="assets/c2_logo_fleet_1783429638355.jpg" alt="" class="section-logo">
+                            <span>Posizionamento ONG nel Mar Mediterraneo&nbsp;<span class="info-tooltip">
+                                <i class="fa-regular fa-circle-question"></i>
+                                <span class="tooltip-text">Mappa interattiva per il monitoraggio della flotta e delle attività delle navi SAR delle ONG operanti nel Mediterraneo Centrale. Mostra la posizione in tempo reale, la rotta e lo stato del transponder AIS.</span>
+                            </span></span>
+                        </h2>
+                        <div class="map-filters">
+                            <button id="map-reset-btn" class="graph-btn-secondary" title="Ripristina vista mappa">
+                                <i class="fa-solid fa-arrows-rotate"></i> Reset
+                            </button>
+                            <div class="dropdown-multiselect" id="ship-dropdown">
+                                <button class="dropdown-btn" id="ship-dropdown-btn">
+                                    <span>Filtra navi</span>
+                                    <i class="fa-solid fa-chevron-down"></i>
+                                </button>
+                                <div class="dropdown-content" id="ship-dropdown-content">
+                                    <label class="dropdown-option">
+                                        <input type="checkbox" id="ship-select-all" checked>
+                                        <span>Seleziona tutte</span>
+                                    </label>
+                                    <hr class="dropdown-divider">
+                                    <div id="ship-checkboxes-container">
+                                        <!-- Popolato dinamicamente da JS -->
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="card-body map-container-equal">
-                            <div id="map"></div>
-                            <div class="map-legend-container" id="acled-map-legend"></div>
-                        </div>
                     </div>
-                </section>
+                    <div class="card-body map-container-equal">
+                        <div id="map"></div>
+                        <div class="map-legend-container" id="acled-map-legend"></div>
+                    </div>
+                </div>
+            </section>
 
-                <!-- Colonna Destra: Timeline Eventi -->
-                <section class="right-panel">
-                    <div class="card timeline-card">
-                        <div class="card-header">
-                            <h2>
-                                <img src="assets/c2_logo_timeline_1783429646899.jpg" alt="" class="section-logo">
-                                <span>Cronologia Eventi&nbsp;<span class="info-tooltip">
-                                    <i class="fa-regular fa-circle-question"></i>
-                                    <span class="tooltip-text">Flusso cronologico interattivo di tutte le note validate caricate nel wiki, inclusi i sensori EWS e le notizie OSINT. Consente la ricerca testuale, il filtraggio per tipo (EWS/News) e la selezione per intervallo di date.</span>
-                                </span></span>
-                            </h2>
-                            <div class="timeline-filters">
-                                <input type="text" id="search-input" placeholder="Cerca">
-                                <select id="type-filter">
-                                    <option value="all">Tutti</option>
-                                    <option value="ews">EWS</option>
-                                    <option value="news">News</option>
-                                </select>
-                                <div class="date-range-filter">
-                                    <input type="text" id="date-range" placeholder="Filtra per data" readonly>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body timeline-wrapper-equal">
-                            <div id="timeline-events" class="timeline">
-                                <!-- Popolato dinamicamente da JS -->
-                                <div class="loading-spinner">
-                                    <i class="fa-solid fa-spinner fa-spin"></i> Caricamento in corso...
-                                </div>
+            <!-- 4. CRONOLOGIA EVENTI (Tutta larghezza) -->
+            <section class="full-width-panel">
+                <div class="card timeline-card">
+                    <div class="card-header">
+                        <h2>
+                            <img src="assets/c2_logo_timeline_1783429646899.jpg" alt="" class="section-logo">
+                            <span>Cronologia Eventi&nbsp;<span class="info-tooltip">
+                                <i class="fa-regular fa-circle-question"></i>
+                                <span class="tooltip-text">Flusso cronologico interattivo di tutte le note validate caricate nel wiki, inclusi i sensori EWS e le notizie OSINT. Consente la ricerca testuale, il filtraggio per tipo (EWS/News) e la selezione per intervallo di date.</span>
+                            </span></span>
+                        </h2>
+                        <div class="timeline-filters">
+                            <input type="text" id="search-input" placeholder="Cerca">
+                            <select id="type-filter">
+                                <option value="all">Tutti</option>
+                                <option value="ews">EWS</option>
+                                <option value="news">News</option>
+                            </select>
+                            <div class="date-range-filter">
+                                <input type="text" id="date-range" placeholder="Filtra per data" readonly>
                             </div>
                         </div>
                     </div>
-                </section>
-            </div>
+                    <div class="card-body timeline-wrapper-equal">
+                        <div id="timeline-events" class="timeline">
+                            <!-- Popolato dinamicamente da JS -->
+                            <div class="loading-spinner">
+                                <i class="fa-solid fa-spinner fa-spin"></i> Caricamento in corso...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             <!-- GRAFI (Wiki + ACLED) — card unica con tab -->
             <section class="full-width-panel" id="graphs-section">
@@ -515,6 +514,6 @@
     <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 
     <!-- Nostro Script -->
-    <script src="app.js?v=12"></script>
+    <script src="app.js?v=20"></script>
 </body>
 </html>
