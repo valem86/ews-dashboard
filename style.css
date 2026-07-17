@@ -2515,6 +2515,15 @@ body::after {
 
 .graph-filter-chip input[type="radio"] { display: none; }
 
+.flag-icon {
+    width: 16px;
+    height: 11px;
+    border-radius: 1.5px;
+    display: inline-block;
+    flex-shrink: 0;
+    margin-right: 2px;
+}
+
 .graph-filter-chip:hover {
     background: rgba(255,255,255,0.08);
     color: #e2e8f0;
