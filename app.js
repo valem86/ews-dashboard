@@ -13,6 +13,9 @@ let currentCountryFilter = 'ALL';
 let currentTimeWindow = 30; // Finestra temporale attiva: 7 | 30 | 90 | null (tutto)
 let startDateFilter = null;
 let endDateFilter = null;
+let mapStartDateFilter = null;
+let mapEndDateFilter = null;
+let playbackInterval = null;
 
 // Inizializzazione al caricamento del DOM
 document.addEventListener('DOMContentLoaded', () => {
@@ -79,6 +82,31 @@ function initFlatpickr() {
             }
         }
     });
+
+    flatpickr("#map-date-range", {
+        mode: "range",
+        locale: "it",
+        dateFormat: "Y-m-d",
+        altInput: true,
+        altFormat: "d/m/Y",
+        theme: "dark",
+        onChange: function(selectedDates, dateStr, instance) {
+            if (selectedDates.length === 2) {
+                mapStartDateFilter = instance.formatDate(selectedDates[0], "Y-m-d");
+                mapEndDateFilter = instance.formatDate(selectedDates[1], "Y-m-d");
+            } else if (selectedDates.length === 0) {
+                mapStartDateFilter = null;
+                mapEndDateFilter = null;
+            } else {
+                mapStartDateFilter = instance.formatDate(selectedDates[0], "Y-m-d");
+                mapEndDateFilter = null;
+            }
+            if (dbData) {
+                renderShipsOnMap(dbData.ngo_ships);
+                if (dbData.acled_events) initAcledMapLayer(dbData.acled_events);
+            }
+        }
+    });
 }
 
 // 1. INIZIALIZZAZIONE DELLA MAPPA LEAFLET (ZOOM POSIZIONATO IN BASSO A DESTRA)
@@ -86,8 +114,13 @@ function initMap() {
     // Inizializza la mappa centrata nel Mediterraneo Centrale, disabilitando lo zoom control in alto a sinistra
     map = L.map('map', {
         zoomControl: false,
-        attributionControl: false
-    }).setView([37.0, 15.0], 5.5);
+        attributionControl: false,
+        zoomSnap: 0.1
+    });
+
+    // Bounds strategici fissi (Italia, Tunisia, Libia)
+    window.MACRO_BOUNDS = L.latLngBounds([[22.0, 5.0], [47.0, 20.0]]);
+    map.fitBounds(window.MACRO_BOUNDS);
 
     // Tile Layer: CartoDB Dark Matter (Tema scuro premium)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
@@ -429,10 +462,61 @@ function renderShipsOnMap(ships) {
     const selectedShips = getSelectedShips();
     const filterActive = checkboxes.length > 0;
 
-    const filteredShips = ships.filter(ship => {
+    let filteredShips = ships.filter(ship => {
         if (!filterActive) return true;
         return selectedShips.includes(ship.name);
     });
+
+    if (mapStartDateFilter) {
+        const shipsOnDate = [];
+        filteredShips.forEach(ship => {
+            if (ship.history && ship.history.length > 0) {
+                let validEntries = ship.history.filter(h => {
+                    if (!h.timestamp) return false;
+                    const hDate = new Date(h.timestamp);
+                    const start = new Date(mapStartDateFilter);
+                    if (hDate < start) return false;
+                    if (mapEndDateFilter) {
+                        const end = new Date(mapEndDateFilter);
+                        end.setHours(23, 59, 59, 999);
+                        if (hDate > end) return false;
+                    } else {
+                        if (!h.timestamp.includes(mapStartDateFilter)) return false;
+                    }
+                    return true;
+                });
+                
+                if (validEntries.length > 0) {
+                    validEntries.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                    const entry = validEntries[validEntries.length - 1];
+                    shipsOnDate.push({
+                        ...ship,
+                        lat: entry.lat,
+                        lon: entry.lon,
+                        sog: entry.sog,
+                        cog: entry.cog,
+                        timestamp: entry.timestamp,
+                        history: validEntries
+                    });
+                }
+            } else {
+                if (ship.timestamp) {
+                    const sDate = new Date(ship.timestamp);
+                    const start = new Date(mapStartDateFilter);
+                    let inRange = false;
+                    if (mapEndDateFilter) {
+                        const end = new Date(mapEndDateFilter);
+                        end.setHours(23, 59, 59, 999);
+                        inRange = (sDate >= start && sDate <= end);
+                    } else {
+                        inRange = String(ship.timestamp).includes(mapStartDateFilter);
+                    }
+                    if (inRange) shipsOnDate.push(ship);
+                }
+            }
+        });
+        filteredShips = shipsOnDate;
+    }
 
     filteredShips.forEach(ship => {
         if (!ship.lat || !ship.lon) return;
@@ -441,15 +525,23 @@ function renderShipsOnMap(ships) {
         const isMoving = ship.sog > 0.5;
         const color = isMoving ? '#10b981' : '#f59e0b'; // Verde in movimento, giallo fermo
 
-        // Marker a cerchio luminoso
-        const marker = L.circleMarker([ship.lat, ship.lon], {
-            radius: 8,
-            fillColor: color,
-            color: '#fff',
-            weight: 2,
-            opacity: 0.9,
-            fillOpacity: 0.9
+        // Icona navale direzionale (SVG freccia)
+        const rotation = ship.cog || 0;
+        const svgIcon = `
+            <svg width="24" height="24" viewBox="0 0 24 24" style="transform: rotate(${rotation}deg); filter: drop-shadow(0 0 3px ${color});">
+                <path d="M12 2L4 20L12 17L20 20L12 2Z" fill="${color}" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round" />
+            </svg>
+        `;
+        
+        const shipIcon = L.divIcon({
+            html: svgIcon,
+            className: 'custom-ship-icon',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12],
+            popupAnchor: [0, -12]
         });
+
+        const marker = L.marker([ship.lat, ship.lon], { icon: shipIcon });
 
         // Costruisce la sezione cronologia — tutti i record espansi, con scroll abilitato via disableScrollPropagation
         const historyEntries = (ship.history && ship.history.length > 0)
@@ -505,21 +597,17 @@ function renderShipsOnMap(ships) {
         shipsLayer.addLayer(marker);
     });
 
-    // Se ci sono navi visualizzate, inquadriamole — ma restando ancorati
-    // al Mediterraneo Centrale (teatro operativo Libia/Tunisia/Sicilia).
-    // Evita che una singola nave in un porto lontano zoomi su tutta l'Europa.
-    const MED_BOUNDS = L.latLngBounds([[30.5, 8.0], [39.5, 22.0]]);
-    if (filteredShips.length > 0) {
-        const group = new L.featureGroup(shipsLayer.getLayers());
-        const shipBounds = group.getBounds();
-        if (MED_BOUNDS.contains(shipBounds)) {
-            map.fitBounds(shipBounds.pad(0.25), { maxZoom: 8 });
+    // Gestione Inquadratura Mappa
+    // Non modifichiamo lo zoom se siamo in fase di playback (time-lapse)
+    if (!playbackInterval) {
+        if (filteredShips.length > 0 && dbData && filteredShips.length < dbData.ngo_ships.length) {
+            // L'utente ha filtrato specifiche navi: auto-zoom su di esse
+            const group = new L.featureGroup(shipsLayer.getLayers());
+            map.fitBounds(group.getBounds().pad(0.25), { maxZoom: 8 });
         } else {
-            // Navi fuori dal teatro: manteniamo la vista sul Mediterraneo Centrale
-            map.fitBounds(MED_BOUNDS, { maxZoom: 7 });
+            // Vista predefinita o reset: inquadra Italia, Tunisia, Libia in modo responsivo
+            map.fitBounds(window.MACRO_BOUNDS);
         }
-    } else {
-        map.fitBounds(MED_BOUNDS, { maxZoom: 7 });
     }
 }
 
@@ -655,8 +743,8 @@ function renderChart(history) {
         // (Disordini/Repressione/Vuoti), lo STILE della linea codifica il Paese
         // (Libia = continua, Tunisia = tratteggiata). Niente rosso/verde di stato.
         const countries = [
-            { code: 'LY', name: 'Libia', colorUnrest: '#38bdf8', colorRep: '#c084fc', colorConf: '#fbbf24', dash: [] },
-            { code: 'TS', name: 'Tunisia', colorUnrest: '#38bdf8', colorRep: '#c084fc', colorConf: '#fbbf24', dash: [6, 4] }
+            { code: 'LY', name: 'Libia', colorUnrest: '#00f2fe', colorRep: '#ff2a5f', colorConf: '#ffb300', dash: [] },
+            { code: 'TS', name: 'Tunisia', colorUnrest: '#00f2fe', colorRep: '#ff2a5f', colorConf: '#ffb300', dash: [6, 4] }
         ];
 
         countries.forEach(c => {
@@ -683,7 +771,9 @@ function renderChart(history) {
                 borderDash: c.dash,
                 borderWidth: 2,
                 tension: 0.3,
-                fill: false
+                fill: false,
+                country: c.code,
+                dimension: 'Civil_Unrest'
             });
 
             datasets.push({
@@ -693,7 +783,9 @@ function renderChart(history) {
                 borderDash: c.dash,
                 borderWidth: 2,
                 tension: 0.3,
-                fill: false
+                fill: false,
+                country: c.code,
+                dimension: 'State_Repression'
             });
 
             datasets.push({
@@ -703,7 +795,9 @@ function renderChart(history) {
                 borderDash: c.dash,
                 borderWidth: 2,
                 tension: 0.3,
-                fill: false
+                fill: false,
+                country: c.code,
+                dimension: 'Conflict_PowerVacuum'
             });
         });
     } else {
@@ -730,29 +824,35 @@ function renderChart(history) {
             {
                 label: `Disordini Civili (${countryName})`,
                 data: datasetUnrest,
-                borderColor: '#38bdf8',
-                backgroundColor: 'rgba(56, 189, 248, 0.06)',
+                borderColor: '#00f2fe',
+                backgroundColor: 'rgba(0, 242, 254, 0.08)',
                 borderWidth: 2,
                 tension: 0.3,
-                fill: true
+                fill: true,
+                country: currentCountryFilter,
+                dimension: 'Civil_Unrest'
             },
             {
                 label: `Repressione Statale (${countryName})`,
                 data: datasetRepression,
-                borderColor: '#c084fc',
-                backgroundColor: 'rgba(192, 132, 252, 0.06)',
+                borderColor: '#ff2a5f',
+                backgroundColor: 'rgba(255, 42, 95, 0.08)',
                 borderWidth: 2,
                 tension: 0.3,
-                fill: true
+                fill: true,
+                country: currentCountryFilter,
+                dimension: 'State_Repression'
             },
             {
                 label: `Vuoti di potere/Conflitti (${countryName})`,
                 data: datasetConflict,
-                borderColor: '#fbbf24',
-                backgroundColor: 'rgba(251, 191, 36, 0.06)',
+                borderColor: '#ffb300',
+                backgroundColor: 'rgba(255, 179, 0, 0.08)',
                 borderWidth: 2,
                 tension: 0.3,
-                fill: true
+                fill: true,
+                country: currentCountryFilter,
+                dimension: 'Conflict_PowerVacuum'
             }
         ];
     }
@@ -837,15 +937,41 @@ function renderChart(history) {
             },
             onClick: (evt, elements) => {
                 if (!elements.length) return;
+                
+                // Ottieni l'indice del dataset e del punto temporale
+                const datasetIndex = elements[0].datasetIndex;
                 const idx = elements[0].index;
                 const date = dates[idx];
+                
+                // Estrai i metadati precisi del dataset cliccato
+                const activeDataset = gdeltChart.data.datasets[datasetIndex];
+                const country = activeDataset.country;
+                const dimension = activeDataset.dimension;
+                
                 const spikes = dbData.gdelt_spike_details || {};
-                const matchingSpike = Object.values(spikes).find(s => s.date === date);
+                
+                // Cerca per chiave precisa "YYYY-MM-DD|COUNTRY|DIMENSION"
+                const preciseKey = `${date}|${country}|${dimension}`;
+                const matchingSpike = spikes[preciseKey];
+                
                 if (matchingSpike) {
                     showGdeltModal(matchingSpike);
                 } else {
-                    const available = Object.values(spikes).filter(s => s.date <= date).sort((a,b) => b.date.localeCompare(a.date));
-                    if (available.length) showGdeltModal(available[0]);
+                    // Fallback se la chiave non coincide al 100%: cerchiamo per data e metadati equivalenti
+                    const matchingSpikeFallback = Object.values(spikes).find(s => 
+                        s.date === date && s.country === country && s.dimension === dimension
+                    );
+                    if (matchingSpikeFallback) {
+                        showGdeltModal(matchingSpikeFallback);
+                    } else {
+                        // Fallback temporale prioritario sullo stesso Paese
+                        const available = Object.values(spikes)
+                            .filter(s => s.date <= date && s.country === country && s.dimension === dimension)
+                            .sort((a,b) => b.date.localeCompare(a.date));
+                        if (available.length) {
+                            showGdeltModal(available[0]);
+                        }
+                    }
                 }
             },
             scales: {
@@ -1100,12 +1226,12 @@ function showAcledModal(dayData) {
     container.innerHTML = '';
 
     const EVENT_COLORS = {
-        'Battles': '#ef4444',
-        'Explosions/Remote violence': '#f97316',
-        'Violence against civilians': '#dc2626',
-        'Riots': '#f59e0b',
-        'Protests': '#3b82f6',
-        'Strategic developments': '#6b7280'
+        'Battles': '#ff003c',
+        'Explosions/Remote violence': '#ff6600',
+        'Violence against civilians': '#bf00ff',
+        'Riots': '#fcee0a',
+        'Protests': '#00e5ff',
+        'Strategic developments': '#cbd5e1'
     };
 
     // Filtra la lista ricca globale di tutti gli eventi georeferenziati caricati (dbData.acled_events)
@@ -1125,6 +1251,9 @@ function showAcledModal(dayData) {
             card.className = 'acled-event-card';
             card.style.borderLeftColor = color;
             
+            // Genera ID stabile
+            const eventId = "acled_" + btoa(encodeURIComponent(ev.date + ev.lat + ev.lon + ev.type)).replace(/[^a-zA-Z0-9]/g, '');
+            
             card.innerHTML = `
                 <div class="acled-event-card-header">
                     <span class="acled-event-card-title" style="color:${color}">${ev.type}</span>
@@ -1136,6 +1265,7 @@ function showAcledModal(dayData) {
                 <div class="acled-event-card-detail"><strong>Vittime stimate:</strong> <span class="${ev.fatalities > 0 ? 'text-danger' : 'text-success'}" style="font-weight:700">${ev.fatalities}</span></div>
                 ${ev.notes ? `<div class="acled-event-card-notes">"${ev.notes}"</div>` : ''}
                 <div style="margin-top:6px;font-size:0.65rem;color:#64748b;text-align:right">Fonte: ${ev.source}</div>
+                ${ev.lat && ev.lon ? `<button class="acled-flyto-btn" onclick="flyToAcledEvent('${eventId}')"><i class="fa-solid fa-map-location-dot"></i> Visualizza in mappa</button>` : ''}
             `;
             container.appendChild(card);
         });
@@ -1183,6 +1313,63 @@ function showAcledModal(dayData) {
     modal.style.display = 'flex';
     modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; }, { once: true });
 }
+
+// Funzione globale per il FlyTo da modale ACLED a Mappa ONG
+window.flyToAcledEvent = function(eventId) {
+    // Chiudi modale
+    document.getElementById('acled-modal').style.display = 'none';
+    
+    // Attiva livello ACLED se spento
+    const acledToggle = document.getElementById('map-acled-toggle');
+    if (acledToggle && !acledToggle.checked) {
+        acledToggle.checked = true;
+        // forza l'aggiornamento
+        if (dbData && dbData.acled_events) {
+            initAcledMapLayer(dbData.acled_events);
+        }
+    }
+    
+    // Scroll fluido alla mappa
+    const mapEl = document.getElementById('map');
+    if (mapEl) {
+        mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    // Anima zoom, apri popup ed evidenzia il marker
+    if (window.acledMarkersMap && window.acledMarkersMap[eventId]) {
+        const marker = window.acledMarkersMap[eventId];
+        
+        // Applica l'effetto ghost a tutti gli altri marker
+        Object.values(window.acledMarkersMap).forEach(m => {
+            if (m !== marker && m._path) {
+                L.DomUtil.addClass(m._path, 'acled-ghost');
+                L.DomUtil.removeClass(m._path, 'acled-pulse');
+            }
+        });
+        
+        // Applica l'effetto focus (pulse) al marker target
+        if (marker._path) {
+            L.DomUtil.removeClass(marker._path, 'acled-ghost');
+            L.DomUtil.addClass(marker._path, 'acled-pulse');
+        }
+        
+        // FlyTo sulle coordinate jitterate del marker per centrarlo perfettamente
+        if (typeof map !== 'undefined' && map) {
+            map.flyTo(marker.getLatLng(), 12, { duration: 1.5 });
+            
+            // Aspettiamo che l'animazione FlyTo finisca (1.5s) prima di aprire il popup.
+            // Questo permette alla funzione autoPan di Leaflet di calcolare correttamente
+            // le dimensioni del popup e spingere la mappa verso il basso se necessario.
+            setTimeout(() => {
+                if (window.acledMarkersMap && window.acledMarkersMap[eventId]) {
+                    marker.openPopup();
+                }
+            }, 1600);
+        } else {
+            marker.openPopup();
+        }
+    }
+};
 
 // =============================================================================
 // 7e. LAYER ACLED sulla mappa Leaflet (ultima settimana)
@@ -1260,20 +1447,34 @@ function initAcledMapLayer(acledEvents) {
     acledLayer = L.layerGroup();
 
     const EVENT_FILL_MAP = {
-        'Battles': '#ef4444',                       // Rosso acceso
-        'Explosions/Remote violence': '#f97316',     // Arancione
-        'Violence against civilians': '#dc2626',     // Rosso scuro
-        'Riots': '#f59e0b',                          // Giallo ambra
-        'Protests': '#3b82f6',                       // Blu
-        'Strategic developments': '#6b7280'          // Grigio
+        'Battles': '#ff003c',
+        'Explosions/Remote violence': '#ff6600',
+        'Violence against civilians': '#bf00ff',
+        'Riots': '#fcee0a',
+        'Protests': '#00e5ff',
+        'Strategic developments': '#cbd5e1'
     };
 
     let addedCount = 0;
+    window.acledMarkersMap = {};
 
     acledEvents.forEach(ev => {
         // Applica il filtro paese della dashboard
         if (currentCountryFilter === 'LY' && ev.country !== 'Libya') return;
         if (currentCountryFilter === 'TS' && ev.country !== 'Tunisia') return;
+
+        // Applica il filtro data (se impostato)
+        if (mapStartDateFilter) {
+            const evDate = new Date(ev.date);
+            const start = new Date(mapStartDateFilter);
+            if (evDate < start) return;
+            if (mapEndDateFilter) {
+                const end = new Date(mapEndDateFilter);
+                if (evDate > end) return;
+            } else {
+                if (ev.date !== mapStartDateFilter) return;
+            }
+        }
 
         const lat = parseFloat(ev.lat);
         const lon = parseFloat(ev.lon);
@@ -1301,6 +1502,9 @@ function initAcledMapLayer(acledEvents) {
             weight: 1.5,
             opacity: 0.9
         });
+        
+        const eventId = "acled_" + btoa(encodeURIComponent(ev.date + ev.lat + ev.lon + ev.type)).replace(/[^a-zA-Z0-9]/g, '');
+        window.acledMarkersMap[eventId] = marker;
 
         marker.bindPopup(`
             <div style="font-family:Inter,sans-serif;font-size:0.78rem;min-width:240px;max-width:300px;color:#f8fafc;padding:2px;">
@@ -1318,6 +1522,18 @@ function initAcledMapLayer(acledEvents) {
                 <div style="margin-top:4px;font-size:0.65rem;color:#64748b;text-align:right">Fonte: ${ev.source}</div>
             </div>
         `, { className: 'custom-leaflet-popup', maxWidth: 300 });
+
+        // Aggiungi un listener di chiusura per resettare gli stili
+        marker.on('popupclose', () => {
+            if (window.acledMarkersMap) {
+                Object.values(window.acledMarkersMap).forEach(m => {
+                    if (m._path) {
+                        L.DomUtil.removeClass(m._path, 'acled-ghost');
+                        L.DomUtil.removeClass(m._path, 'acled-pulse');
+                    }
+                });
+            }
+        });
 
         marker.addTo(acledLayer);
         addedCount++;
@@ -1337,12 +1553,12 @@ function initAcledMapLayer(acledEvents) {
         if (legendEl) {
             legendEl.style.display = isChecked ? 'flex' : 'none';
             legendEl.innerHTML = `
-                <div class="map-legend-item"><span class="map-legend-color" style="background:#ef4444;"></span>Scontri</div>
-                <div class="map-legend-item"><span class="map-legend-color" style="background:#dc2626;"></span>Violenza vs Civili</div>
-                <div class="map-legend-item"><span class="map-legend-color" style="background:#f97316;"></span>Esplosioni</div>
-                <div class="map-legend-item"><span class="map-legend-color" style="background:#f59e0b;"></span>Rivolte</div>
-                <div class="map-legend-item"><span class="map-legend-color" style="background:#3b82f6;"></span>Proteste</div>
-                <div class="map-legend-item"><span class="map-legend-color" style="background:#6b7280;"></span>Sviluppi Strategici</div>
+                <div class="map-legend-item"><span class="map-legend-color" style="background:#ff003c; box-shadow: 0 0 5px #ff003c;"></span>Scontri</div>
+                <div class="map-legend-item"><span class="map-legend-color" style="background:#bf00ff; box-shadow: 0 0 5px #bf00ff;"></span>Violenza vs Civili</div>
+                <div class="map-legend-item"><span class="map-legend-color" style="background:#ff6600; box-shadow: 0 0 5px #ff6600;"></span>Esplosioni</div>
+                <div class="map-legend-item"><span class="map-legend-color" style="background:#fcee0a; box-shadow: 0 0 5px #fcee0a;"></span>Rivolte</div>
+                <div class="map-legend-item"><span class="map-legend-color" style="background:#00e5ff; box-shadow: 0 0 5px #00e5ff;"></span>Proteste</div>
+                <div class="map-legend-item"><span class="map-legend-color" style="background:#cbd5e1; box-shadow: 0 0 5px #cbd5e1;"></span>Sviluppi Strategici</div>
             `;
         }
     } else {
@@ -1537,11 +1753,91 @@ function setupEventListeners() {
             const acledToggle = document.getElementById('map-acled-toggle');
             if (acledToggle) acledToggle.checked = true;
             
+            // Reset date filter
+            mapStartDateFilter = null;
+            mapEndDateFilter = null;
+            const fp = document.getElementById('map-date-range');
+            if (fp && fp._flatpickr) {
+                fp._flatpickr.clear();
+            }
+            if (playbackInterval) {
+                clearInterval(playbackInterval);
+                playbackInterval = null;
+                const pbtn = document.getElementById('map-play-btn');
+                if (pbtn) pbtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+            }
+            
             // Re-renderizza le navi e gli eventi ACLED (ripristina lo zoom iniziale)
             if (dbData) {
                 renderShipsOnMap(dbData.ngo_ships);
                 initAcledMapLayer(dbData.acled_events || []);
             }
+        });
+    }
+
+    // Playback Mappa ONG
+    const mapPlayBtn = document.getElementById('map-play-btn');
+    if (mapPlayBtn) {
+        mapPlayBtn.addEventListener('click', () => {
+            if (playbackInterval) {
+                // Ferma playback
+                clearInterval(playbackInterval);
+                playbackInterval = null;
+                mapPlayBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+                return;
+            }
+
+            if (!dbData || !dbData.acled_events || dbData.acled_events.length === 0) return;
+
+            // Raccogli date uniche ordinandole cronologicamente
+            let uniqueDates = [...new Set(dbData.acled_events.map(ev => ev.date))].filter(d => d).sort();
+            
+            // Se c'è un filtro date attivo prima del play, restringi le date da riprodurre
+            if (mapStartDateFilter) {
+                const startObj = new Date(mapStartDateFilter);
+                const endObj = mapEndDateFilter ? new Date(mapEndDateFilter) : new Date(mapStartDateFilter);
+                endObj.setHours(23, 59, 59, 999);
+                uniqueDates = uniqueDates.filter(d => {
+                    const dObj = new Date(d);
+                    return dObj >= startObj && dObj <= endObj;
+                });
+            }
+            
+            if (uniqueDates.length === 0) return;
+
+            mapPlayBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+            
+            // Forza l'inquadratura macro (Italia, Tunisia, Libia) all'avvio del playback
+            // per permettere la visione d'insieme globale dell'evoluzione.
+            if (typeof map !== 'undefined' && map && window.MACRO_BOUNDS) {
+                map.fitBounds(window.MACRO_BOUNDS);
+            }
+            
+            let dateIndex = 0;
+
+            playbackInterval = setInterval(() => {
+                if (dateIndex >= uniqueDates.length) {
+                    clearInterval(playbackInterval);
+                    playbackInterval = null;
+                    mapPlayBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+                    return;
+                }
+
+                mapStartDateFilter = uniqueDates[dateIndex];
+                mapEndDateFilter = null;
+                
+                // Aggiorna flatpickr visivamente senza triggerare l'evento onChange ciclico
+                const fpInput = document.getElementById('map-date-range');
+                if (fpInput && fpInput._flatpickr) {
+                    fpInput._flatpickr.setDate(mapStartDateFilter, false);
+                }
+
+                // Renderizza
+                renderShipsOnMap(dbData.ngo_ships);
+                initAcledMapLayer(dbData.acled_events);
+
+                dateIndex++;
+            }, 1200); // Avanza ogni 1.2s
         });
     }
 

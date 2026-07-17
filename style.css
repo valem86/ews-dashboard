@@ -709,24 +709,24 @@ body::after {
     align-items: center;
 }
 
-#date-range {
-    background: rgba(6, 12, 28, 0.8);
-    border: 1px solid rgba(0, 229, 255, 0.15);
-    color: var(--text-primary);
-    padding: 6px 12px;
+.date-range-filter input {
+    background: rgba(6, 12, 28, 0.8) !important;
+    border: 1px solid rgba(0, 229, 255, 0.12) !important;
+    color: var(--text-primary) !important;
+    padding: 8px 12px !important;
     border-radius: 6px;
     font-size: 0.8rem;
     font-family: var(--font-family);
     outline: none;
     cursor: pointer;
-    width: 200px;
+    width: 280px !important;
     text-align: center;
     transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
-#date-range:focus {
-    border-color: var(--accent-blue);
-    box-shadow: 0 0 10px rgba(0, 229, 255, 0.15);
+.date-range-filter input:focus {
+    border-color: var(--accent-blue) !important;
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.12) !important;
 }
 
 /* Flatpickr Dark C2 */
@@ -1477,6 +1477,13 @@ body::after {
 
 /* Mobile Screens (max-width: 768px) */
 @media (max-width: 768px) {
+    /* Adatta l'input data sui dispositivi piccoli per evitare overflow orizzontale */
+    .date-range-filter input {
+        width: 100% !important;
+        max-width: 240px;
+        min-width: 140px;
+    }
+
     /* Disabilita l'hover "fantasma" su mobile, ma NON quando il tooltip
        è stato aperto esplicitamente al tap (.tooltip-open) */
     .info-tooltip:hover:not(.tooltip-open) .tooltip-text {
@@ -2939,3 +2946,48 @@ body::after {
         transform: translate(-50%, -50%);
     }
 }
+.acled-flyto-btn { margin-top: 10px; width: 100%; background: rgba(0, 229, 255, 0.15); border: 1px solid rgba(0, 229, 255, 0.4); color: #00e5ff; border-radius: 6px; padding: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; font-weight: 600; font-size: 0.75rem; }
+.acled-flyto-btn:hover { background: rgba(0, 229, 255, 0.3); }
+
+@keyframes acledPulse {
+    0% {
+        stroke-width: 1.5;
+        stroke-opacity: 1;
+        stroke: #ffffff;
+    }
+    50% {
+        stroke-width: 8;
+        stroke-opacity: 0.3;
+        stroke: #ffffff;
+    }
+    100% {
+        stroke-width: 1.5;
+        stroke-opacity: 1;
+        stroke: #ffffff;
+    }
+}
+
+.acled-pulse {
+    animation: acledPulse 1.5s infinite ease-in-out;
+    stroke: #ffffff !important;
+    stroke-width: 2 !important;
+    stroke-opacity: 1 !important;
+    z-index: 1000 !important;
+}
+
+.custom-ship-icon {
+    background: transparent !important;
+    border: none !important;
+}
+
+.custom-ship-icon svg {
+    display: block;
+    /* Smooth transition nel caso in cui cambiasse la rotta, anche se qui è un rendering statico */
+    transition: transform 0.3s ease-out;
+}
+
+.acled-ghost {
+    opacity: 0.2 !important;
+    transition: opacity 0.3s ease;
+}
+
