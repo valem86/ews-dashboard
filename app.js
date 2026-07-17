@@ -1521,7 +1521,7 @@ function initAcledMapLayer(acledEvents) {
                 </div>
                 <div style="margin-top:4px;font-size:0.65rem;color:#64748b;text-align:right">Fonte: ${ev.source}</div>
             </div>
-        `, { className: 'custom-leaflet-popup', maxWidth: 300 });
+        `, { className: 'custom-leaflet-popup acled-popup-drag-through', maxWidth: 300 });
 
         // Aggiungi un listener di chiusura per resettare gli stili
         marker.on('popupclose', () => {
