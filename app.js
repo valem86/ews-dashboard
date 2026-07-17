@@ -550,12 +550,12 @@ function renderShipsOnMap(ships) {
 
         const historyHtml = `
             <div style="margin-top: 10px; font-weight: 700; font-size: 0.72rem; border-top: 1px solid rgba(0,229,255,0.15); padding-top: 6px; color: #00e5ff;">
-                📋 Cronologia Rilevamenti (${historyEntries.length})
+                <i class="fa-solid fa-list-ul" style="margin-right: 4px;"></i> Cronologia Rilevamenti (${historyEntries.length})
             </div>
             <div class="ship-history-scroll" style="max-height: 150px; overflow-y: scroll; font-size: 0.68rem; color: #a4b0be; margin-top: 4px; padding-right: 2px;">
                 ${historyEntries.map((h, i) => `
                     <div style="border-bottom: 1px solid rgba(255,255,255,0.07); padding: 5px 0; line-height: 1.5;">
-                        <div style="color: ${i === 0 ? '#00e5ff' : '#cdd6f4'}; font-weight: 600;">${i === 0 ? '📍' : '📅'} ${h.timestamp} UTC</div>
+                        <div style="color: ${i === 0 ? '#00e5ff' : '#cdd6f4'}; font-weight: 600;">${i === 0 ? '<i class="fa-solid fa-location-dot" style="margin-right: 4px; color: #00e5ff;"></i>' : '<i class="fa-regular fa-calendar" style="margin-right: 4px; color: #64748b;"></i>'} ${h.timestamp} UTC</div>
                         <div>Lat: ${parseFloat(h.lat).toFixed(5)}, Lon: ${parseFloat(h.lon).toFixed(5)}</div>
                         <div>Vel: <strong>${h.sog}</strong> nodi &nbsp;|&nbsp; Rotta: <strong>${h.cog}°</strong></div>
                     </div>
@@ -568,7 +568,7 @@ function renderShipsOnMap(ships) {
             <div class="map-popup" style="min-width: 200px;">
                 <h4><i class="fa-solid fa-ship"></i> ${ship.name}</h4>
                 <p><strong>MMSI:</strong> ${ship.mmsi}</p>
-                <p><strong>Stato:</strong> ${isMoving ? '🟢 In Movimento' : '⚠️ Fermo / Drifting'}</p>
+                <p><strong>Stato:</strong> ${isMoving ? '<span style="color: #00e676;"><i class="fa-solid fa-circle" style="font-size: 0.6rem; vertical-align: middle; margin-right: 4px;"></i>In Movimento</span>' : '<span style="color: #eab308;"><i class="fa-solid fa-triangle-exclamation" style="font-size: 0.72rem; vertical-align: middle; margin-right: 4px;"></i>Fermo / Drifting</span>'}</p>
                 <p><strong>Velocità:</strong> ${ship.sog} nodi</p>
                 <p><strong>Rotta:</strong> ${ship.cog}°</p>
                 <p><strong>Posizione:</strong> ${ship.lat.toFixed(4)}, ${ship.lon.toFixed(4)}</p>
@@ -1159,14 +1159,20 @@ function renderAcledHeatmap(acledHistory) {
 // =============================================================================
 function showGdeltModal(spike) {
     const DIM_LABELS = {
-        'Civil_Unrest': '🟡 Disordini Civili',
-        'State_Repression': '🔴 Repressione Statale',
-        'Conflict_PowerVacuum': '🔴 Vuoti di Potere / Conflitti'
+        'Civil_Unrest': '<i class="fa-solid fa-circle" style="color: #eab308; font-size: 0.65rem; vertical-align: middle; margin-right: 5px;"></i> Disordini Civili',
+        'State_Repression': '<i class="fa-solid fa-circle" style="color: #ef4444; font-size: 0.65rem; vertical-align: middle; margin-right: 5px;"></i> Repressione Statale',
+        'Conflict_PowerVacuum': '<i class="fa-solid fa-circle" style="color: #ef4444; font-size: 0.65rem; vertical-align: middle; margin-right: 5px;"></i> Vuoti di Potere / Conflitti'
     };
-    const COUNTRY_LABELS = { 'LY': '🇱🇾 Libia', 'TS': '🇹🇳 Tunisia' };
+    const FLAG_SVG = {
+        'LY': `<svg class="flag-icon" viewBox="0 0 30 20" style="vertical-align: middle; margin-right: 6px; width: 18px; height: 12px; border-radius: 1.5px; box-shadow: 0 0 3px rgba(0,0,0,0.4);"><rect width="30" height="5" fill="#e71824"/><rect y="5" width="30" height="10" fill="#000000"/><rect y="15" width="30" height="5" fill="#239e46"/><path d="M15 8.3a2 2 0 1 0 0 3.4 1.6 1.6 0 1 1 0-3.4" fill="#ffffff"/><polygon points="17.2,9.2 17.5,10 18.3,10 17.7,10.5 17.9,11.3 17.2,10.8 16.5,11.3 16.7,10.5 16.1,10 16.9,10" fill="#ffffff"/></svg>`,
+        'TS': `<svg class="flag-icon" viewBox="0 0 30 20" style="vertical-align: middle; margin-right: 6px; width: 18px; height: 12px; border-radius: 1.5px; box-shadow: 0 0 3px rgba(0,0,0,0.4);"><rect width="30" height="20" fill="#e10600"/><circle cx="15" cy="10" r="5" fill="#ffffff"/><path d="M15.2 8.3a1.7 1.7 0 1 0 0 3.4 1.3 1.3 0 1 1 0-3.4" fill="#e10600"/><polygon points="17.2,9.2 17.5,10 18.3,10 17.7,10.5 17.9,11.3 17.2,10.8 16.5,11.3 16.7,10.5 16.1,10 16.9,10" fill="#e10600"/></svg>`
+    };
+    const COUNTRY_NAMES = { 'LY': 'Libia', 'TS': 'Tunisia' };
+    const countryFlag = FLAG_SVG[spike.country] || '';
+    const countryName = COUNTRY_NAMES[spike.country] || spike.country;
 
-    document.getElementById('gdelt-modal-title').textContent =
-        `Spike GDELT — ${COUNTRY_LABELS[spike.country] || spike.country} — ${spike.date}`;
+    document.getElementById('gdelt-modal-title').innerHTML =
+        `Spike GDELT — ${countryFlag}${countryName} — ${spike.date}`;
 
     document.getElementById('gdelt-modal-meta').innerHTML = `
         <span class="modal-meta-badge badge-red">Z-Score: ${spike.z_score.toFixed(2)}</span>
@@ -1184,7 +1190,7 @@ function showGdeltModal(spike) {
             <td>${ev.location || '—'}</td>
             <td class="mono">${ev.coords || '—'}</td>
             <td class="text-center">${ev.mentions}</td>
-            <td><a href="${ev.url}" target="_blank" rel="noopener" class="intel-link">🔗 Apri</a></td>
+            <td><a href="${ev.url}" target="_blank" rel="noopener" class="intel-link"><i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.68rem; margin-right: 4px;"></i>Apri</a></td>
         `;
         tbody.appendChild(tr);
     });
@@ -1214,7 +1220,11 @@ function showAcledModal(dayData) {
         `ACLED — Dettaglio del ${dateFormatted}`;
 
     const severityPct = Math.round((dayData.severity_norm || 0) * 100);
-    const level = severityPct > 60 ? '🔴 ALTA' : severityPct > 30 ? '🟡 MEDIA' : '🟢 BASSA';
+    const level = severityPct > 60
+        ? '<i class="fa-solid fa-circle" style="color: #ef4444; font-size: 0.65rem; vertical-align: middle; margin-right: 5px;"></i> ALTA'
+        : severityPct > 30
+            ? '<i class="fa-solid fa-circle" style="color: #eab308; font-size: 0.65rem; vertical-align: middle; margin-right: 5px;"></i> MEDIA'
+            : '<i class="fa-solid fa-circle" style="color: #00e676; font-size: 0.65rem; vertical-align: middle; margin-right: 5px;"></i> BASSA';
     document.getElementById('acled-modal-meta').innerHTML = `
         <span class="modal-meta-badge badge-red">Intensità: ${level} (${severityPct}%)</span>
         <span class="modal-meta-badge badge-gray">Eventi: ${dayData.total_events}</span>
@@ -1977,13 +1987,13 @@ function openWarningMatrixDetailModal(key, val) {
     const iconContainer = document.getElementById('matrix-modal-icon');
     if (iconContainer) {
         if (val.status === 'RED') {
-            iconContainer.innerText = '🔴';
+            iconContainer.innerHTML = '<i class="fa-solid fa-circle" style="color: #ef4444; font-size: 0.85rem; vertical-align: middle;"></i>';
         } else if (val.status === 'YELLOW') {
-            iconContainer.innerText = '🟡';
+            iconContainer.innerHTML = '<i class="fa-solid fa-circle" style="color: #eab308; font-size: 0.85rem; vertical-align: middle;"></i>';
         } else if (val.status === 'GREEN') {
-            iconContainer.innerText = '🟢';
+            iconContainer.innerHTML = '<i class="fa-solid fa-circle" style="color: #00e676; font-size: 0.85rem; vertical-align: middle;"></i>';
         } else {
-            iconContainer.innerText = '⚪';
+            iconContainer.innerHTML = '<i class="fa-solid fa-circle" style="color: #94a3b8; font-size: 0.85rem; vertical-align: middle;"></i>';
         }
     }
 
@@ -2868,8 +2878,8 @@ function openAcledDrawer(node, connectedEdges, graphData) {
     const metaEl = document.getElementById('acled-drawer-meta');
     if (metaEl) {
         const countries = (node.countries || []).map(c => `<span class="graph-drawer-badge" style="background:rgba(248,113,113,0.1);color:#f87171;">${c}</span>`).join('');
-        const events = `<span class="graph-drawer-badge" style="background:rgba(255,255,255,0.06);color:#94a3b8;">⚡ ${node.n_events} eventi</span>`;
-        const fatal = node.total_fatalities > 0 ? `<span class="graph-drawer-badge" style="background:rgba(239,68,68,0.15);color:#ef4444;">☠️ ${node.total_fatalities} vittime</span>` : '';
+        const events = `<span class="graph-drawer-badge" style="background:rgba(255,255,255,0.06);color:#94a3b8;"><i class="fa-solid fa-bolt" style="margin-right: 4px; color: #a855f7;"></i>${node.n_events} eventi</span>`;
+        const fatal = node.total_fatalities > 0 ? `<span class="graph-drawer-badge" style="background:rgba(239,68,68,0.15);color:#ef4444;"><i class="fa-solid fa-skull" style="margin-right: 4px; color: #ef4444;"></i>${node.total_fatalities} vittime</span>` : '';
         metaEl.innerHTML = countries + events + fatal;
     }
 
