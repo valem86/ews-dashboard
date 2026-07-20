@@ -556,7 +556,7 @@ function renderShipsOnMap(ships) {
                 ${historyEntries.map((h, i) => `
                     <div style="border-bottom: 1px solid rgba(255,255,255,0.07); padding: 5px 0; line-height: 1.5;">
                         <div style="color: ${i === 0 ? '#00e5ff' : '#cdd6f4'}; font-weight: 600;">${i === 0 ? '<i class="fa-solid fa-location-dot" style="margin-right: 4px; color: #00e5ff;"></i>' : '<i class="fa-regular fa-calendar" style="margin-right: 4px; color: #64748b;"></i>'} ${h.timestamp} UTC</div>
-                        <div>Lat: ${parseFloat(h.lat).toFixed(5)}, Lon: ${parseFloat(h.lon).toFixed(5)}</div>
+                        <div>Lat: ${parseFloat(h.lat).toFixed(5)}, Lon: ${parseFloat(h.lon).toFixed(5)} <span style="font-size: 0.6rem; color: #64748b; float: right;">[${h.source || 'AisStream'}]</span></div>
                         <div>Vel: <strong>${h.sog}</strong> nodi &nbsp;|&nbsp; Rotta: <strong>${h.cog}°</strong></div>
                     </div>
                 `).join('')}
@@ -571,6 +571,7 @@ function renderShipsOnMap(ships) {
                 <p><strong>Stato:</strong> ${isMoving ? '<span style="color: #00e676;"><i class="fa-solid fa-circle" style="font-size: 0.6rem; vertical-align: middle; margin-right: 4px;"></i>In Movimento</span>' : '<span style="color: #eab308;"><i class="fa-solid fa-triangle-exclamation" style="font-size: 0.72rem; vertical-align: middle; margin-right: 4px;"></i>Fermo / Drifting</span>'}</p>
                 <p><strong>Velocità:</strong> ${ship.sog} nodi</p>
                 <p><strong>Rotta:</strong> ${ship.cog}°</p>
+                <p><strong>Sorgente AIS:</strong> <span style="color: #00e5ff; font-weight: 600;">${ship.source || 'AisStream'}</span></p>
                 <p><strong>Posizione:</strong> ${ship.lat.toFixed(4)}, ${ship.lon.toFixed(4)}</p>
                 <p class="popup-time"><i class="fa-solid fa-clock"></i> ${ship.timestamp} UTC</p>
                 ${historyHtml}
