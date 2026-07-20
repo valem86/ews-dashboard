@@ -1798,23 +1798,53 @@ function setupEventListeners() {
                 return;
             }
 
-            if (!dbData || !dbData.acled_events || dbData.acled_events.length === 0) return;
+            if (!dbData) return;
 
-            // Raccogli date uniche ordinandole cronologicamente
-            let uniqueDates = [...new Set(dbData.acled_events.map(ev => ev.date))].filter(d => d).sort();
-            
-            // Se c'è un filtro date attivo prima del play, restringi le date da riprodurre
-            if (mapStartDateFilter) {
-                const startObj = new Date(mapStartDateFilter);
-                const endObj = mapEndDateFilter ? new Date(mapEndDateFilter) : new Date(mapStartDateFilter);
-                endObj.setHours(23, 59, 59, 999);
-                uniqueDates = uniqueDates.filter(d => {
-                    const dObj = new Date(d);
-                    return dObj >= startObj && dObj <= endObj;
-                });
+            let allDates = [];
+            // Raccogli date da eventi ACLED
+            if (dbData.acled_events && dbData.acled_events.length > 0) {
+                allDates = allDates.concat(dbData.acled_events.map(ev => ev.date).filter(d => d));
             }
+            // Raccogli date da tracciamento navi ONG
+            if (dbData.ngo_ships) {
+                for (let mmsi in dbData.ngo_ships) {
+                    const ship = dbData.ngo_ships[mmsi];
+                    if (ship.timestamp) allDates.push(ship.timestamp.substring(0, 10));
+                    if (ship.history) {
+                        ship.history.forEach(h => {
+                            if (h.timestamp) allDates.push(h.timestamp.substring(0, 10));
+                        });
+                    }
+                }
+            }
+
+            if (allDates.length === 0) return;
+            allDates.sort();
+
+            let minDateObj = new Date(allDates[0]);
+            let maxDateObj = new Date(allDates[allDates.length - 1]);
+
+            // Se c'è un filtro date attivo prima del play, usa esplicitamente il range selezionato dall'utente
+            if (mapStartDateFilter) {
+                minDateObj = new Date(mapStartDateFilter);
+                maxDateObj = mapEndDateFilter ? new Date(mapEndDateFilter) : new Date(mapStartDateFilter);
+            }
+
+            minDateObj.setHours(0, 0, 0, 0);
+            maxDateObj.setHours(23, 59, 59, 999);
             
-            if (uniqueDates.length === 0) return;
+            if (minDateObj > maxDateObj) return;
+
+            // Genera array continuo di date (step di 1 giorno) da start a end
+            let uniqueDates = [];
+            let curr = new Date(minDateObj);
+            while (curr <= maxDateObj) {
+                let yyyy = curr.getFullYear();
+                let mm = String(curr.getMonth() + 1).padStart(2, '0');
+                let dd = String(curr.getDate()).padStart(2, '0');
+                uniqueDates.push(`${yyyy}-${mm}-${dd}`);
+                curr.setDate(curr.getDate() + 1);
+            }
 
             mapPlayBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
             
