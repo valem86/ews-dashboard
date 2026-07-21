@@ -91,6 +91,9 @@ function initFlatpickr() {
         altFormat: "d/m/Y",
         theme: "dark",
         onChange: function(selectedDates, dateStr, instance) {
+            // Rimuovi classe active dai bottoni di scelta rapida della mappa quando si cambia data manualmente
+            document.querySelectorAll('.btn-map-time-window').forEach(b => b.classList.remove('active'));
+            
             if (selectedDates.length === 2) {
                 mapStartDateFilter = instance.formatDate(selectedDates[0], "Y-m-d");
                 mapEndDateFilter = instance.formatDate(selectedDates[1], "Y-m-d");
@@ -106,6 +109,50 @@ function initFlatpickr() {
                 if (dbData.acled_events) initAcledMapLayer(dbData.acled_events);
             }
         }
+    });
+
+    // Event listener per i pulsanti di selezione rapida mappa (7gg e 30gg)
+    document.querySelectorAll('.btn-map-time-window').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const isActive = btn.classList.contains('active');
+            document.querySelectorAll('.btn-map-time-window').forEach(b => b.classList.remove('active'));
+            
+            const fpInput = document.getElementById('map-date-range');
+            
+            if (isActive) {
+                // Se era già attivo, lo disattiviamo (reset filtri)
+                mapStartDateFilter = null;
+                mapEndDateFilter = null;
+                if (fpInput && fpInput._flatpickr) {
+                    fpInput._flatpickr.clear();
+                }
+            } else {
+                // Altrimenti attiviamo la finestra temporale selezionata
+                btn.classList.add('active');
+                const days = parseInt(btn.getAttribute('data-window'), 10);
+                const today = new Date();
+                const past = new Date();
+                past.setDate(today.getDate() - days);
+
+                if (fpInput && fpInput._flatpickr) {
+                    fpInput._flatpickr.setDate([past, today], false);
+                }
+
+                const formatDate = (d) => {
+                    let yyyy = d.getFullYear();
+                    let mm = String(d.getMonth() + 1).padStart(2, '0');
+                    let dd = String(d.getDate()).padStart(2, '0');
+                    return `${yyyy}-${mm}-${dd}`;
+                };
+                mapStartDateFilter = formatDate(past);
+                mapEndDateFilter = formatDate(today);
+            }
+
+            if (dbData) {
+                renderShipsOnMap(dbData.ngo_ships);
+                if (dbData.acled_events) initAcledMapLayer(dbData.acled_events);
+            }
+        });
     });
 }
 

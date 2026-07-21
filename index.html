@@ -274,7 +274,11 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="date-range-filter" style="display: flex; gap: 8px;">
+                                <div class="date-range-filter" style="display: flex; gap: 8px; align-items: center;">
+                                    <div class="chart-filters-group">
+                                        <button class="btn-time-window btn-map-time-window" data-window="7">7gg</button>
+                                        <button class="btn-time-window btn-map-time-window" data-window="30">30gg</button>
+                                    </div>
                                     <input type="text" id="map-date-range" placeholder="Filtra per data" readonly>
                                     <button id="map-play-btn" class="graph-btn-secondary" title="Play Evoluzione">
                                         <i class="fa-solid fa-play"></i>
@@ -376,9 +380,6 @@
                                 </label>
                                 <label class="graph-filter-chip" data-type="event">
                                     <input type="radio" name="wiki-type" value="event"> <i class="fa-solid fa-bolt"></i> Eventi
-                                </label>
-                                <label class="graph-filter-chip" data-type="source">
-                                    <input type="radio" name="wiki-type" value="source"> <i class="fa-solid fa-newspaper"></i> Fonti
                                 </label>
                             </div>
                             <button id="wiki-graph-reset" class="graph-btn-secondary" title="Ripristina vista">
