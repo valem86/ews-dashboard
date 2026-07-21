@@ -1179,7 +1179,8 @@ body::after {
     padding: 12px 16px;
     position: absolute;
     z-index: 2000;
-    bottom: 130%;
+    top: 130%;
+    bottom: auto;
     left: 50%;
     transform: translateX(-50%);
     opacity: 0;
@@ -1196,16 +1197,6 @@ body::after {
     display: block;
     visibility: visible;
     opacity: 1;
-    transform: translateX(-50%) translateY(-5px);
-}
-
-/* Tooltip below variant */
-.info-tooltip.tooltip-below .tooltip-text {
-    bottom: auto;
-    top: 130%;
-}
-
-.info-tooltip.tooltip-below:hover .tooltip-text {
     transform: translateX(-50%) translateY(5px);
 }
 
@@ -1215,10 +1206,6 @@ body::after {
     display: block;
     visibility: visible;
     opacity: 1;
-    transform: translateX(-50%) translateY(-5px);
-}
-
-.info-tooltip.tooltip-below.tooltip-open .tooltip-text {
     transform: translateX(-50%) translateY(5px);
 }
 
@@ -2396,18 +2383,30 @@ body::after {
     cursor: help;
 }
 
-/* Essendo il primo elemento a sinistra nei controlli, il tooltip centrato
-   (left:50% + translateX(-50%)) uscirebbe dal bordo sinistro dello schermo:
-   su DESKTOP lo ancoriamo a sinistra dell'icona (si apre verso destra).
-   Serve alta specificità (0,5,0) per battere le regole .info-tooltip.tooltip-below:hover
-   (0,4,0) che altrimenti ri-applicherebbero translateX(-50%) portandolo fuori schermo.
+/* Essendo tutte le icone di aiuto collocate sul lato sinistro delle intestazioni/card, 
+   su DESKTOP ancoriamo i tooltip a sinistra dell'icona (si aprono verso destra) 
+   per evitare che sporgano oltre il bordo sinistro dello schermo o delle card.
    Racchiuso in min-width:769px per non interferire con l'overlay centrato mobile. */
 @media (min-width: 769px) {
-    .info-tooltip.tooltip-below.graph-help .tooltip-text,
-    .info-tooltip.tooltip-below.graph-help:hover .tooltip-text,
-    .info-tooltip.tooltip-below.graph-help.tooltip-open .tooltip-text {
-        left: 0;
+    .info-tooltip .tooltip-text {
+        left: -10px;
         right: auto;
+        transform: none;
+    }
+    
+    .info-tooltip:hover .tooltip-text,
+    .info-tooltip.tooltip-open .tooltip-text {
+        transform: translateY(-5px);
+    }
+    
+    .info-tooltip.tooltip-below .tooltip-text {
+        left: -10px;
+        right: auto;
+        transform: none;
+    }
+    
+    .info-tooltip.tooltip-below:hover .tooltip-text,
+    .info-tooltip.tooltip-below.tooltip-open .tooltip-text {
         transform: translateY(5px);
     }
 }
@@ -2927,7 +2926,6 @@ body::after {
     }
 
     .info-tooltip .tooltip-text,
-    .info-tooltip.tooltip-below .tooltip-text,
     .info-tooltip.graph-help .tooltip-text {
         position: fixed;
         left: 50%;
@@ -2941,7 +2939,6 @@ body::after {
     }
 
     .info-tooltip.tooltip-open .tooltip-text,
-    .info-tooltip.tooltip-below.tooltip-open .tooltip-text,
     .info-tooltip.graph-help.tooltip-open .tooltip-text {
         transform: translate(-50%, -50%);
     }
