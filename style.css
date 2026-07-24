@@ -759,6 +759,26 @@ body::after {
     box-shadow: -5px 0 0 rgba(0, 229, 255, 0.12), 5px 0 0 rgba(0, 229, 255, 0.12) !important;
 }
 
+/* Giorni con Assessment Matrice di Allerta (Evidenziazione ciano glowing) */
+.flatpickr-calendar.dark .flatpickr-day.has-matrix-report {
+    background: rgba(0, 229, 255, 0.18) !important;
+    border: 1px solid rgba(0, 229, 255, 0.6) !important;
+    color: #00e5ff !important;
+    font-weight: 700 !important;
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.35) !important;
+}
+
+.flatpickr-calendar.dark .flatpickr-day.has-matrix-report:hover {
+    background: rgba(0, 229, 255, 0.35) !important;
+    color: #ffffff !important;
+}
+
+.flatpickr-calendar.dark .flatpickr-day.has-matrix-report.selected {
+    background: var(--accent-blue) !important;
+    color: #040814 !important;
+    border-color: var(--accent-blue) !important;
+}
+
 .timeline-filters input, .timeline-filters select {
     background: rgba(6, 12, 28, 0.8);
     border: 1px solid rgba(0, 229, 255, 0.12);
@@ -1474,6 +1494,23 @@ body::after {
         width: 100% !important;
         max-width: 240px;
         min-width: 140px;
+    }
+
+    /* Ottimizzazione mobile per header Matrice di Allerta */
+    .warning-matrix-card .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .warning-matrix-card .date-range-filter {
+        width: 100% !important;
+        justify-content: space-between;
+    }
+
+    .warning-matrix-card .date-range-filter input {
+        flex: 1;
+        max-width: none !important;
     }
 
     /* Disabilita l'hover "fantasma" su mobile, ma NON quando il tooltip

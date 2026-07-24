@@ -51,7 +51,7 @@
             <!-- 1. WARNING MATRIX (Tutta larghezza - In alto) -->
             <section class="full-width-panel">
                 <div class="card warning-matrix-card">
-                    <div class="card-header">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                         <h2>
                             <img src="assets/c2_logo_matrix_1783429620751.jpg" alt="" class="section-logo">
                             <span>Matrice di Allerta</span>
@@ -60,6 +60,12 @@
                                 <span class="tooltip-text">Matrice di allerta che aggrega i trigger attivati dai sensori EWS (GDELT, UNHCR, 4Mi, AIS) e da notizie di fonti aperte. Se i trigger si attivano, il rispettivo indicatore diventa rosso. Cliccando sui trigger attivi è possibile aprire la nota di approfondimento.</span>
                             </span>
                         </h2>
+                        <div class="date-range-filter" style="display: flex; gap: 8px; align-items: center;">
+                            <input type="text" id="matrix-date-range" placeholder="Filtra per data" readonly>
+                            <button id="matrix-reset-btn" class="graph-btn-secondary" title="Ripristina ultimo assessment">
+                                <i class="fa-solid fa-arrows-rotate"></i> Reset
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="warning-grid-horizontal">

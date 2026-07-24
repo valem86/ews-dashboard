@@ -298,6 +298,7 @@ async function loadData() {
 function renderDashboardComponents() {
     renderLastUpdated(dbData.last_updated);
     renderWarningMatrix(dbData.warning_matrix);
+    initMatrixFlatpickr();
     renderShipsOnMap(dbData.ngo_ships);
     renderChart(dbData.gdelt_history);
     renderTimeline(dbData.notes);
@@ -312,6 +313,70 @@ function renderDashboardComponents() {
     if (btnRefresh && refreshIcon) {
         refreshIcon.classList.remove('fa-spin');
         btnRefresh.disabled = false;
+    }
+}
+
+// Inizializzazione Flatpickr per la Matrice di Allerta (con evidenziazione e carry-over)
+function initMatrixFlatpickr() {
+    const dates = (dbData && dbData.matrix_available_dates) ? dbData.matrix_available_dates : [];
+    const fpInput = document.getElementById('matrix-date-range');
+    if (!fpInput) return;
+
+    if (fpInput._flatpickr) {
+        fpInput._flatpickr.destroy();
+    }
+
+    flatpickr("#matrix-date-range", {
+        mode: "single",
+        locale: "it",
+        dateFormat: "Y-m-d",
+        altInput: true,
+        altFormat: "d/m/Y",
+        theme: "dark",
+        // Abilitiamo ESCLUSIVAMENTE le date in cui è stato prodotto un report Alert-Matrix
+        enable: [
+            function(date) {
+                if (dates.length === 0) return false;
+                const yyyy = date.getFullYear();
+                const mm = String(date.getMonth() + 1).padStart(2, '0');
+                const dd = String(date.getDate()).padStart(2, '0');
+                const formatted = `${yyyy}-${mm}-${dd}`;
+                return dates.includes(formatted);
+            }
+        ],
+        onDayCreate: function(dObj, dStr, fp, dayElem) {
+            const year = dayElem.dateObj.getFullYear();
+            const month = String(dayElem.dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dayElem.dateObj.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+
+            if (dates.includes(dateStr)) {
+                dayElem.classList.add('has-matrix-report');
+                dayElem.title = `Assessment di Allerta del ${day}/${month}/${year}`;
+            }
+        },
+        onChange: function(selectedDates, dateStr, instance) {
+            if (selectedDates.length === 1 && dbData && dbData.warning_matrix_history) {
+                const formattedDate = instance.formatDate(selectedDates[0], "Y-m-d");
+                const matrixForDate = dbData.warning_matrix_history[formattedDate];
+                if (matrixForDate) {
+                    renderWarningMatrix(matrixForDate);
+                }
+            }
+        }
+    });
+
+    const resetBtn = document.getElementById('matrix-reset-btn');
+    if (resetBtn) {
+        resetBtn.onclick = () => {
+            const input = document.getElementById('matrix-date-range');
+            if (input && input._flatpickr) {
+                input._flatpickr.clear();
+            }
+            if (dbData && dbData.warning_matrix) {
+                renderWarningMatrix(dbData.warning_matrix);
+            }
+        };
     }
 }
 
