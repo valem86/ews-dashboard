@@ -931,6 +931,11 @@ body::after {
     font-size: 0.8rem;
     color: #c8d6e5;
     line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .tag-list {
@@ -980,6 +985,22 @@ body::after {
 /* =========================================================
    MODAL — Command Detail Overlay
    ========================================================= */
+/* Blocco dello scroll di sfondo quando un modale è aperto */
+body.modal-open {
+    overflow: hidden !important;
+    height: 100vh !important;
+    touch-action: none;
+}
+
+.modal,
+.intel-modal-overlay,
+.modal-content,
+.intel-modal,
+.modal-body,
+.intel-modal-body {
+    overscroll-behavior: contain;
+}
+
 .modal {
     display: none;
     position: fixed;
@@ -1853,8 +1874,13 @@ body::after {
     }
     
     .timeline-preview {
-        font-size: 0.75rem;
+        font-size: 0.76rem;
         line-height: 1.35;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     .tag-list {

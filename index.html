@@ -203,7 +203,7 @@
                             <i class="fa-solid fa-chart-line"></i>
                             <span id="gdelt-modal-title">Dettaglio Spike GDELT</span>
                         </div>
-                        <button class="intel-modal-close" onclick="document.getElementById('gdelt-modal').style.display='none'">&times;</button>
+                        <button class="intel-modal-close" onclick="closeIntelModal('gdelt-modal')">&times;</button>
                     </div>
                     <div class="intel-modal-meta" id="gdelt-modal-meta"></div>
                     <div class="intel-modal-body">
@@ -235,7 +235,7 @@
                             <i class="fa-solid fa-map-location-dot"></i>
                             <span id="acled-modal-title">Dettaglio ACLED</span>
                         </div>
-                        <button class="intel-modal-close" onclick="document.getElementById('acled-modal').style.display='none'">&times;</button>
+                        <button class="intel-modal-close" onclick="closeIntelModal('acled-modal')">&times;</button>
                     </div>
                     <div class="intel-modal-meta" id="acled-modal-meta"></div>
                     <div class="intel-modal-body" style="max-height: 65vh; overflow-y: auto; -webkit-overflow-scrolling: touch;">
@@ -514,7 +514,7 @@
                 </div>
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <div id="matrix-modal-date" style="font-size: 0.75rem; color: #94a3b8; font-weight: normal; font-style: italic;"></div>
-                    <button class="intel-modal-close" onclick="document.getElementById('matrix-detail-modal').style.display='none'">&times;</button>
+                    <button class="intel-modal-close" onclick="closeIntelModal('matrix-detail-modal')">&times;</button>
                 </div>
             </div>
             <div class="intel-modal-meta" id="matrix-modal-meta">
@@ -528,7 +528,7 @@
             </div>
             <div class="intel-modal-footer" style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; background: rgba(8,16,35,0.4); border-radius: 0 0 14px 14px;">
                 <span id="matrix-modal-report-link-container"></span>
-                <button class="btn-tab" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8;" onclick="document.getElementById('matrix-detail-modal').style.display='none'">Chiudi</button>
+                <button class="btn-tab" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8;" onclick="closeIntelModal('matrix-detail-modal')">Chiudi</button>
             </div>
         </div>
     </div>

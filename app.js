@@ -1314,7 +1314,13 @@ function showGdeltModal(spike) {
 
     const modal = document.getElementById('gdelt-modal');
     modal.style.display = 'flex';
-    modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; }, { once: true });
+    updateBodyScrollLock();
+    modal.addEventListener('click', e => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+            updateBodyScrollLock();
+        }
+    }, { once: true });
 }
 
 // =============================================================================
@@ -1434,13 +1440,20 @@ function showAcledModal(dayData) {
 
     const modal = document.getElementById('acled-modal');
     modal.style.display = 'flex';
-    modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; }, { once: true });
+    updateBodyScrollLock();
+    modal.addEventListener('click', e => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+            updateBodyScrollLock();
+        }
+    }, { once: true });
 }
 
 // Funzione globale per il FlyTo da modale ACLED a Mappa ONG
 window.flyToAcledEvent = function(eventId) {
     // Chiudi modale
     document.getElementById('acled-modal').style.display = 'none';
+    updateBodyScrollLock();
     
     // Attiva livello ACLED se spento
     const acledToggle = document.getElementById('map-acled-toggle');
@@ -1792,6 +1805,27 @@ function renderTimeline(notes) {
     });
 }
 
+// UTILITY: GESTIONE SCROLL LOCK DEL BODY PER TUTTE LE MODALI
+function updateBodyScrollLock() {
+    const hasActiveModal = document.querySelector('.modal.active') !== null;
+    const hasActiveIntelModal = Array.from(document.querySelectorAll('.intel-modal-overlay'))
+        .some(m => m.style.display && m.style.display !== 'none');
+
+    if (hasActiveModal || hasActiveIntelModal) {
+        document.body.classList.add('modal-open');
+    } else {
+        document.body.classList.remove('modal-open');
+    }
+}
+
+function closeIntelModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    updateBodyScrollLock();
+}
+
 // 8. APERTURA MODALE DETTAGLI NOTA
 function openNoteModal(note) {
     const modal = document.getElementById('note-modal');
@@ -1805,6 +1839,7 @@ function openNoteModal(note) {
     document.getElementById('modal-body').innerHTML = simpleMarkdownParse(note.body);
     
     modal.classList.add('active');
+    updateBodyScrollLock();
 }
 
 // 9. CONFIGURAZIONE EVENT LISTENER
@@ -2021,6 +2056,7 @@ function setupEventListeners() {
     document.querySelectorAll('.close-modal, .close-modal-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.getElementById('note-modal').classList.remove('active');
+            updateBodyScrollLock();
         });
     });
 
@@ -2040,6 +2076,12 @@ function setupEventListeners() {
         const modal = document.getElementById('note-modal');
         if (e.target === modal) {
             modal.classList.remove('active');
+            updateBodyScrollLock();
+        }
+        
+        if (e.target.classList && e.target.classList.contains('intel-modal-overlay')) {
+            e.target.style.display = 'none';
+            updateBodyScrollLock();
         }
         
         // Chiudi dropdown navi se si clicca fuori
@@ -2178,8 +2220,12 @@ function openWarningMatrixDetailModal(key, val) {
 
     // Mostra la modale e gestisci la chiusura al click all'esterno
     modal.style.display = 'flex';
+    updateBodyScrollLock();
     modal.addEventListener('click', e => {
-        if (e.target === modal) modal.style.display = 'none';
+        if (e.target === modal) {
+            modal.style.display = 'none';
+            updateBodyScrollLock();
+        }
     }, { once: true });
 }
 
