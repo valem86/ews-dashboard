@@ -513,9 +513,13 @@ function renderLastUpdated(timeStr) {
     document.getElementById('last-updated-time').innerText = timeStr;
 }
 
+let currentWarningMatrixObj = null;
+
 // 4. RENDER WARNING MATRIX
 function renderWarningMatrix(matrix) {
+    currentWarningMatrixObj = matrix;
     for (const [key, val] of Object.entries(matrix)) {
+        if (key.startsWith('_')) continue;
         const itemEl = document.getElementById(`trigger-${key}`);
         if (itemEl) {
             // Rimuoviamo classi precedenti
@@ -2052,6 +2056,14 @@ function setupEventListeners() {
 
     // Flatpickr gestisce autonomamente il callback onChange su #date-range
 
+    // Tasto Scenario Possibile della Warning Matrix
+    const scenarioBtn = document.getElementById('matrix-scenario-btn');
+    if (scenarioBtn) {
+        scenarioBtn.addEventListener('click', () => {
+            openScenarioModal();
+        });
+    }
+
     // Chiusura Modale (supporto sia per la "X" che per il pulsante "Chiudi Dettaglio" nel footer)
     document.querySelectorAll('.close-modal, .close-modal-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -2219,6 +2231,61 @@ function openWarningMatrixDetailModal(key, val) {
     }
 
     // Mostra la modale e gestisci la chiusura al click all'esterno
+    modal.style.display = 'flex';
+    updateBodyScrollLock();
+    modal.addEventListener('click', e => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+            updateBodyScrollLock();
+        }
+    }, { once: true });
+}
+
+// =============================================================================
+// 7g. MODAL: Dettaglio Scenario Possibile
+// =============================================================================
+function openScenarioModal() {
+    const modal = document.getElementById('scenario-modal');
+    if (!modal) return;
+
+    const matrixObj = currentWarningMatrixObj || (dbData ? dbData.warning_matrix : null);
+    const rawScenarioText = (matrixObj && matrixObj._scenario) ? matrixObj._scenario : "";
+    const scenarioText = typeof rawScenarioText === 'string' ? rawScenarioText.trim() : "";
+
+    // Recuperiamo la data dal primo indicatore disponibile nel report
+    let reportDate = "";
+    if (matrixObj) {
+        for (const [k, v] of Object.entries(matrixObj)) {
+            if (k.startsWith('_')) continue;
+            if (v && v.date) {
+                reportDate = v.date;
+                break;
+            }
+        }
+    }
+
+    // Fallback se la data non è presente nei campi dell'indicatore
+    if (!reportDate) {
+        const fpInput = document.getElementById('matrix-date-range');
+        if (fpInput && fpInput.value) {
+            reportDate = fpInput.value;
+        } else if (dbData && dbData.matrix_available_dates && dbData.matrix_available_dates.length > 0) {
+            reportDate = dbData.matrix_available_dates[dbData.matrix_available_dates.length - 1];
+        }
+    }
+
+    const dateContainer = document.getElementById('scenario-modal-date');
+    if (dateContainer) {
+        dateContainer.innerText = reportDate ? `report del ${formatDateStr(reportDate)}` : "";
+    }
+
+    const bodyTextEl = document.getElementById('scenario-modal-body-text');
+    if (scenarioText && scenarioText !== "") {
+        bodyTextEl.innerHTML = simpleMarkdownParse(scenarioText);
+    } else {
+        bodyTextEl.innerHTML = `<p style="color:#94a3b8; font-style:italic; text-align:center; padding: 25px 15px; background: rgba(0,229,255,0.03); border: 1px dashed rgba(0,229,255,0.15); border-radius: 8px;"><i class="fa-solid fa-circle-info" style="color:#00e5ff; margin-right:6px;"></i> Nessun approfondimento di scenario stilato per il report di questa data.</p>`;
+    }
+
     modal.style.display = 'flex';
     updateBodyScrollLock();
     modal.addEventListener('click', e => {
