@@ -2285,35 +2285,36 @@ body.modal-open {
 }
 
 /* ============================================================
-   WARNING MATRIX SCENARIO BANNER & LEGEND
+   WARNING MATRIX SCENARIO BANNER (COMMAND SPOTLIGHT CENTRATA)
    ============================================================ */
 .matrix-scenario-banner {
-    margin-top: 14px;
-    padding: 10px 16px;
-    background: linear-gradient(90deg, rgba(0, 229, 255, 0.08) 0%, rgba(15, 23, 42, 0.6) 100%);
-    border: 1px solid rgba(0, 229, 255, 0.22);
-    border-left: 3px solid #00e5ff;
-    border-radius: 8px;
+    margin: 18px auto 14px auto;
+    max-width: 680px;
+    width: 100%;
+    padding: 12px 20px;
+    background: radial-gradient(circle at center, rgba(0, 229, 255, 0.14) 0%, rgba(8, 16, 35, 0.9) 85%);
+    border: 1px solid rgba(0, 229, 255, 0.4);
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
     cursor: pointer;
-    transition: all 0.25s ease;
-    box-shadow: 0 0 12px rgba(0, 229, 255, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.25), inset 0 0 15px rgba(0, 229, 255, 0.08);
 }
 
 .matrix-scenario-banner:hover {
-    background: linear-gradient(90deg, rgba(0, 229, 255, 0.15) 0%, rgba(15, 23, 42, 0.75) 100%);
-    border-color: rgba(0, 229, 255, 0.45);
-    border-left-color: #38bdf8;
-    box-shadow: 0 0 18px rgba(0, 229, 255, 0.2);
+    background: radial-gradient(circle at center, rgba(0, 229, 255, 0.22) 0%, rgba(8, 16, 35, 0.95) 85%);
+    border-color: #00e5ff;
+    box-shadow: 0 0 30px rgba(0, 229, 255, 0.45), inset 0 0 20px rgba(0, 229, 255, 0.15);
+    transform: translateY(-1px);
 }
 
 .scenario-banner-info {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     min-width: 0;
     flex: 1;
 }
@@ -2321,13 +2322,14 @@ body.modal-open {
 .scenario-banner-header {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     white-space: nowrap;
 }
 
 .scenario-banner-header i {
     color: #00e5ff;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
+    filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.8));
 }
 
 .scenario-banner-label {
@@ -2335,40 +2337,43 @@ body.modal-open {
     font-weight: 700;
     color: #00e5ff;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
 }
 
 .scenario-banner-preview {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: #e2e8f0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .scenario-btn {
-    background: rgba(0, 229, 255, 0.12);
-    border: 1px solid rgba(0, 229, 255, 0.35);
-    color: #00e5ff;
-    padding: 7px 14px;
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.2) 0%, rgba(0, 140, 255, 0.3) 100%);
+    border: 1px solid #00e5ff;
+    color: #ffffff;
+    padding: 8px 16px;
     border-radius: 6px;
-    font-size: 0.76rem;
+    font-size: 0.78rem;
     font-weight: 700;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 8px;
     white-space: nowrap;
-    transition: all 0.2s ease;
-    box-shadow: 0 0 8px rgba(0, 229, 255, 0.1);
+    transition: all 0.25s ease;
+    box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
 }
 
 .scenario-btn:hover {
     background: #00e5ff;
-    color: #0a1128;
+    color: #081023;
     border-color: #00e5ff;
-    box-shadow: 0 0 16px rgba(0, 229, 255, 0.5);
+    box-shadow: 0 0 22px rgba(0, 229, 255, 0.75);
+    text-shadow: none;
 }
 
 .matrix-legend {
