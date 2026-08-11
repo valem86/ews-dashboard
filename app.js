@@ -518,6 +518,8 @@ let currentWarningMatrixObj = null;
 // 4. RENDER WARNING MATRIX
 function renderWarningMatrix(matrix) {
     currentWarningMatrixObj = matrix;
+    updateMatrixScenarioBanner(matrix);
+
     for (const [key, val] of Object.entries(matrix)) {
         if (key.startsWith('_')) continue;
         const itemEl = document.getElementById(`trigger-${key}`);
@@ -545,6 +547,42 @@ function renderWarningMatrix(matrix) {
                 };
             }
         }
+    }
+}
+
+// Aggiorna l'anteprima in tempo reale nel banner Callout dello Scenario (solo Titolo/Nome dello Scenario)
+function updateMatrixScenarioBanner(matrix) {
+    const previewEl = document.getElementById('scenario-banner-preview-text');
+    if (!previewEl) return;
+
+    const rawScenarioText = (matrix && matrix._scenario) ? matrix._scenario : "";
+    const cleanText = typeof rawScenarioText === 'string' ? rawScenarioText.trim() : "";
+
+    if (cleanText) {
+        // Estrazione mirata di "Scenario X (...)" o "Scenario X ..."
+        const scenarioMatch = cleanText.match(/\b(Scenario\s+\d+\b(?:\s*\([^)]+\)|\s*"[^"]+"|\s*[-–—]\s*[^.\n]+)?)/i);
+        let previewTitle = "";
+
+        if (scenarioMatch && scenarioMatch[1]) {
+            previewTitle = scenarioMatch[1].replace(/[*#`_]/g, '').trim();
+        } else {
+            // Fallback: estrai la prima frase o riga sintetica
+            let firstSentence = cleanText.replace(/[*#`_]/g, '').split('\n')[0].trim();
+            if (firstSentence.length > 70) {
+                firstSentence = firstSentence.substring(0, 67) + '...';
+            }
+            previewTitle = firstSentence;
+        }
+
+        previewEl.innerText = previewTitle;
+        previewEl.style.color = '#e2e8f0';
+        previewEl.style.fontWeight = '600';
+        previewEl.style.fontStyle = 'normal';
+    } else {
+        previewEl.innerText = 'Nessuna valutazione di scenario registrata per questa data.';
+        previewEl.style.color = '#94a3b8';
+        previewEl.style.fontWeight = 'normal';
+        previewEl.style.fontStyle = 'italic';
     }
 }
 
@@ -2056,10 +2094,10 @@ function setupEventListeners() {
 
     // Flatpickr gestisce autonomamente il callback onChange su #date-range
 
-    // Tasto Scenario Possibile della Warning Matrix
-    const scenarioBtn = document.getElementById('matrix-scenario-btn');
-    if (scenarioBtn) {
-        scenarioBtn.addEventListener('click', () => {
+    // Banner Callout e Tasto Scenario Possibile della Warning Matrix
+    const scenarioBanner = document.getElementById('matrix-scenario-banner');
+    if (scenarioBanner) {
+        scenarioBanner.addEventListener('click', (e) => {
             openScenarioModal();
         });
     }
