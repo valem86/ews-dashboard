@@ -2289,9 +2289,9 @@ body.modal-open {
    ============================================================ */
 .matrix-scenario-banner {
     margin: 18px auto 14px auto;
-    max-width: 680px;
+    max-width: 850px;
     width: 100%;
-    padding: 12px 20px;
+    padding: 12px 22px;
     background: radial-gradient(circle at center, rgba(0, 229, 255, 0.14) 0%, rgba(8, 16, 35, 0.9) 85%);
     border: 1px solid rgba(0, 229, 255, 0.4);
     border-radius: 10px;
@@ -2342,11 +2342,10 @@ body.modal-open {
 }
 
 .scenario-banner-preview {
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     color: #e2e8f0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    word-break: break-word;
     font-weight: 600;
 }
 

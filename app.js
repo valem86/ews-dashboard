@@ -566,10 +566,10 @@ function updateMatrixScenarioBanner(matrix) {
         if (scenarioMatch && scenarioMatch[1]) {
             previewTitle = scenarioMatch[1].replace(/[*#`_]/g, '').trim();
         } else {
-            // Fallback: estrai la prima frase o riga sintetica
+            // Fallback: estrai la prima riga o frase integrando fino a 200 caratteri
             let firstSentence = cleanText.replace(/[*#`_]/g, '').split('\n')[0].trim();
-            if (firstSentence.length > 70) {
-                firstSentence = firstSentence.substring(0, 67) + '...';
+            if (firstSentence.length > 200) {
+                firstSentence = firstSentence.substring(0, 197) + '...';
             }
             previewTitle = firstSentence;
         }
