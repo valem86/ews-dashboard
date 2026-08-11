@@ -2094,11 +2094,27 @@ function setupEventListeners() {
 
     // Flatpickr gestisce autonomamente il callback onChange su #date-range
 
-    // Banner Callout e Tasto Scenario Possibile della Warning Matrix
+    // Banner Callout e Pulsanti Scenario della Warning Matrix
     const scenarioBanner = document.getElementById('matrix-scenario-banner');
     if (scenarioBanner) {
-        scenarioBanner.addEventListener('click', (e) => {
+        scenarioBanner.addEventListener('click', () => {
             openScenarioModal();
+        });
+    }
+
+    const scenarioBtn = document.getElementById('matrix-scenario-btn');
+    if (scenarioBtn) {
+        scenarioBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openScenarioModal();
+        });
+    }
+
+    const quarterlyBtn = document.getElementById('quarterly-matrix-btn');
+    if (quarterlyBtn) {
+        quarterlyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openQuarterlyMatrixModal();
         });
     }
 
@@ -2161,8 +2177,9 @@ function simpleMarkdownParse(mdText) {
     
     let html = mdText;
     
-    // Rimuovi eventuale frontmatter se presente nel corpo
+    // Rimuovi eventuale frontmatter se presente nel corpo e righe isolati con trattini "---"
     html = html.replace(/^---[\s\S]*?---/, '');
+    html = html.replace(/^\s*---\s*$/gm, '');
 
     // Converti titoli ### o ##
     html = html.replace(/^###\s+(.*)$/gmi, '<h3>$1</h3>');
@@ -2322,6 +2339,54 @@ function openScenarioModal() {
         bodyTextEl.innerHTML = simpleMarkdownParse(scenarioText);
     } else {
         bodyTextEl.innerHTML = `<p style="color:#94a3b8; font-style:italic; text-align:center; padding: 25px 15px; background: rgba(0,229,255,0.03); border: 1px dashed rgba(0,229,255,0.15); border-radius: 8px;"><i class="fa-solid fa-circle-info" style="color:#00e5ff; margin-right:6px;"></i> Nessun approfondimento di scenario stilato per il report di questa data.</p>`;
+    }
+
+    modal.style.display = 'flex';
+    updateBodyScrollLock();
+    modal.addEventListener('click', e => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+            updateBodyScrollLock();
+        }
+    }, { once: true });
+}
+
+// =============================================================================
+// 7h. MODAL: Matrice Scenari Trimestrali (Griglia 2x2)
+// =============================================================================
+function openQuarterlyMatrixModal() {
+    const modal = document.getElementById('quarterly-matrix-modal');
+    if (!modal) return;
+
+    const validUntilEl = document.getElementById('quarterly-modal-valid-until');
+    let validUntilDate = (dbData && dbData.quarterly_valid_until) ? dbData.quarterly_valid_until : "2026-11-10";
+    if (validUntilEl) {
+        validUntilEl.innerText = `valida fino al ${formatDateStr(validUntilDate)}`;
+    }
+
+    const gridContainer = document.getElementById('quarterly-scenarios-grid');
+    const scenarios = (dbData && dbData.quarterly_scenarios) ? dbData.quarterly_scenarios : [];
+
+    if (gridContainer) {
+        if (scenarios.length > 0) {
+            gridContainer.innerHTML = scenarios.map(sc => `
+                <div class="quarterly-scenario-card">
+                    <div class="quarterly-card-header">
+                        <div class="quarterly-card-title">${sc.title}</div>
+                    </div>
+                    ${sc.driver ? `<div class="quarterly-card-driver">${sc.driver}</div>` : ''}
+                    <div class="quarterly-card-desc">
+                        ${simpleMarkdownParse(sc.description)}
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            gridContainer.innerHTML = `
+                <div style="grid-column: span 2; text-align: center; color: #94a3b8; padding: 30px; font-style: italic;">
+                    Nessuna matrice 2x2 trovata nell'assessment trimestrale.
+                </div>
+            `;
+        }
     }
 
     modal.style.display = 'flex';

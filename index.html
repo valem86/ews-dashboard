@@ -130,9 +130,14 @@
                                     Caricamento valutazione scenario...
                                 </div>
                             </div>
-                            <button id="matrix-scenario-btn" class="scenario-btn" title="Visualizza la Valutazione dello Scenario">
-                                Leggi la valutazione <i class="fa-solid fa-arrow-right"></i>
-                            </button>
+                            <div class="scenario-banner-actions">
+                                <button id="matrix-scenario-btn" class="scenario-btn" title="Visualizza la Valutazione dello Scenario">
+                                    Leggi la valutazione <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                                <button id="quarterly-matrix-btn" class="quarterly-scenario-btn" title="Visualizza la Matrice 2x2 dei 4 Scenari Trimestrali">
+                                    <i class="fa-solid fa-border-all"></i> Matrice scenari
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Legenda codici colore — barra orizzontale compatta -->
@@ -571,6 +576,31 @@
             </div>
             <div class="intel-modal-footer" style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: flex-end; background: rgba(8,16,35,0.4); border-radius: 0 0 14px 14px;">
                 <button class="btn-tab" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8;" onclick="closeIntelModal('scenario-modal')">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE PER MATRICE SCENARI TRIMESTRALI (GRIGLIA 2x2) -->
+    <div id="quarterly-matrix-modal" class="intel-modal-overlay" style="display:none;">
+        <div class="intel-modal intel-modal-large" style="max-width: 920px; width: 95%;">
+            <div class="intel-modal-header">
+                <div class="intel-modal-title">
+                    <i class="fa-solid fa-border-all" style="color: #a855f7; margin-right: 8px;"></i>
+                    <span>Assessment trimestrale</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div id="quarterly-modal-valid-until" style="font-size: 0.75rem; color: #a855f7; font-weight: 600;"></div>
+                    <button class="intel-modal-close" onclick="closeIntelModal('quarterly-matrix-modal')">&times;</button>
+                </div>
+            </div>
+            <div class="intel-modal-body" style="padding: 20px;">
+                <div id="quarterly-scenarios-grid" class="quarterly-scenarios-grid">
+                    <!-- Popolato dinamicamente via JS con le 4 card degli scenari -->
+                    <div style="text-align: center; color: #94a3b8; grid-column: span 2;">Caricamento della matrice 2x2...</div>
+                </div>
+            </div>
+            <div class="intel-modal-footer" style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: flex-end; background: rgba(8,16,35,0.4); border-radius: 0 0 14px 14px;">
+                <button class="btn-tab" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8;" onclick="closeIntelModal('quarterly-matrix-modal')">Chiudi</button>
             </div>
         </div>
     </div>
